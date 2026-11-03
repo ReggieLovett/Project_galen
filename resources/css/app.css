@@ -1,0 +1,208 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+
+    /* Surfaces */
+    --color-canvas: #f0fdf4;
+    --color-surface: #ffffff;
+    --color-sunken: #e8f0ec;
+    --color-line: #cfe3d6;
+    --color-line-strong: #a7c9b3;
+
+    /* Text */
+    --color-ink: #0f2e1d;
+    --color-ink-muted: #475569;
+
+    /* Brand: primary actions */
+    --color-brand: #15803d;
+    --color-brand-hover: #166534;
+    --color-brand-soft: #dcfce7;
+
+    /* Stock assistant (AI) */
+    --color-assist: #0369a1;
+    --color-assist-hover: #075985;
+    --color-assist-soft: #e0f2fe;
+
+    /* Prescription */
+    --color-rx: #92400e;
+    --color-rx-soft: #fef3c7;
+
+    /* Out of stock / errors */
+    --color-danger: #b91c1c;
+    --color-danger-soft: #fee2e2;
+
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none;
+    }
+
+    @media (min-width: 1600px) {
+        html {
+            font-size: 18px;
+        }
+    }
+
+    body {
+        @apply bg-canvas text-ink font-sans antialiased;
+        /* A kiosk is tapped, not read like a document. */
+        user-select: none;
+    }
+
+    input,
+    textarea {
+        user-select: text;
+        caret-color: var(--color-brand);
+    }
+
+    ::selection {
+        background-color: var(--color-brand-soft);
+        color: var(--color-ink);
+    }
+
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-line-strong) transparent;
+    }
+
+    button,
+    a,
+    [role='button'] {
+        touch-action: manipulation;
+        cursor: pointer;
+    }
+
+    h1,
+    h2,
+    h3 {
+        @apply font-display;
+        text-wrap: balance;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+}
+
+/* A sideways-scrolling row that fades out at the right edge to show there is more. */
+@utility scroll-row {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@utility focus-ring {
+    &:focus-visible {
+        outline: 3px solid var(--color-assist);
+        outline-offset: 3px;
+    }
+}
+
+@layer components {
+    .btn {
+        @apply focus-ring inline-flex min-h-14 items-center justify-center gap-2.5 rounded-xl px-6 font-display text-lg font-semibold transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    /* Variants: use with .btn, e.g. class="btn btn-primary" */
+    .btn-primary {
+        @apply bg-brand text-white hover:bg-brand-hover;
+    }
+
+    .btn-assist {
+        @apply bg-assist text-white hover:bg-assist-hover;
+    }
+
+    .btn-quiet {
+        @apply border-2 border-line bg-surface text-ink hover:border-line-strong hover:bg-sunken;
+    }
+
+    .btn-icon {
+        @apply focus-ring inline-flex size-14 shrink-0 items-center justify-center rounded-xl border-2 border-line bg-surface text-ink transition-[background-color,transform] duration-150 ease-out hover:bg-sunken active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40;
+    }
+
+    .chip {
+        @apply focus-ring inline-flex min-h-12 items-center gap-2 rounded-full border-2 border-line bg-surface px-5 font-display text-base font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-line-strong;
+    }
+
+    .chip[aria-pressed='true'],
+    .chip[aria-current='true'] {
+        @apply border-ink bg-ink text-white;
+    }
+
+    .badge {
+        @apply inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-semibold whitespace-nowrap;
+    }
+
+    .key {
+        @apply focus-ring inline-flex h-16 min-w-0 flex-1 items-center justify-center rounded-xl bg-surface font-display text-xl font-semibold text-ink uppercase shadow-[0_2px_0_var(--color-line-strong)] transition-transform duration-100 active:translate-y-0.5 active:shadow-none;
+    }
+}
+
+/* Touch-to-begin pulse */
+@keyframes ripple {
+    from {
+        transform: scale(0.6);
+        opacity: 0.55;
+    }
+    to {
+        transform: scale(1.9);
+        opacity: 0;
+    }
+}
+
+.ripple {
+    animation: ripple 2.4s var(--ease-out-quart) infinite;
+}
+
+.ripple-delay {
+    animation-delay: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ripple {
+        animation: none;
+        opacity: 0;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Receipt printing on an 80 mm thermal printer */
+@media print {
+    @page {
+        size: 80mm auto;
+        margin: 4mm;
+    }
+
+    body {
+        background: #fff;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .receipt-paper {
+        box-shadow: none !important;
+        border: 0 !important;
+        max-width: none !important;
+        padding: 0 !important;
+    }
+}

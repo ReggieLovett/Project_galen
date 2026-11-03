@@ -1,0 +1,102 @@
+<x-layouts.kiosk title="Staff" noindex>
+    <header class="flex items-center gap-4 border-b-2 border-line bg-surface px-6 py-4">
+        <x-logo-mark class="size-12 rounded-xl bg-ink text-white" />
+        <div class="min-w-0 flex-1">
+            <p class="font-display text-xl font-bold">{{ config('kiosk.name') }} · Staff</p>
+            <p class="text-ink-muted">Signed in as {{ auth('admin')->user()->name }} · {{ $kioskOrdersToday }} kiosk {{ Str::plural('order', $kioskOrdersToday) }} today</p>
+        </div>
+        <form method="POST" action="{{ route('admin.logout') }}">
+            @csrf
+            <button type="submit" class="btn btn-quiet">
+                <x-icon name="log-out" />Log out
+            </button>
+        </form>
+    </header>
+
+    <main class="mx-auto max-w-6xl space-y-8 px-6 py-8">
+        @session('success')
+            <x-alert>{{ $value }}</x-alert>
+        @endsession
+        @session('error')
+            <x-alert type="error">{{ $value }}</x-alert>
+        @endsession
+
+        <section class="rounded-2xl border-2 border-line bg-surface">
+            <h2 class="flex items-center gap-3 border-b-2 border-line px-5 py-4 text-xl font-bold">
+                Orders awaiting payment
+                <span class="badge bg-sunken text-base text-ink tabular-nums">{{ $awaitingPayment->count() }}</span>
+            </h2>
+            @if ($awaitingPayment->isEmpty())
+                <p class="px-5 py-8 text-center text-ink-muted">No kiosk orders are waiting at the till.</p>
+            @else
+                <ul class="divide-y-2 divide-line">
+                    @foreach ($awaitingPayment as $order)
+                        <li class="flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4">
+                            <div class="min-w-0 flex-1 basis-72">
+                                <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span class="font-mono text-lg font-semibold">{{ $order->order_number }}</span>
+                                    <span class="text-ink-muted">· {{ $order->created_at->format('g:i A') }} · {{ $order->user?->name ?? 'Guest' }}</span>
+                                    @if ($order->hasPrescriptionItems())
+                                        <span class="badge bg-rx-soft text-rx">Prescription · pharmacist check</span>
+                                    @endif
+                                </p>
+                                <p class="mt-1 text-ink-muted">
+                                    {{ $order->items->map(fn ($item) => "{$item->quantity} × {$item->name}")->join(', ') }}
+                                </p>
+                            </div>
+
+                            <p class="font-display text-xl font-bold tabular-nums"><x-money :amount="$order->total" /></p>
+
+                            <div class="flex gap-2">
+                                <form method="POST" action="{{ route('admin.orders.complete', $order) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-primary">
+                                        <x-icon name="check" />Mark paid<span class="sr-only"> for order {{ $order->order_number }}</span>
+                                    </button>
+                                </form>
+                                <form
+                                    method="POST"
+                                    action="{{ route('admin.orders.cancel', $order) }}"
+                                    x-data
+                                    x-on:submit="confirm(@js("Cancel order {$order->order_number}? Its items go back in stock.")) || $event.preventDefault()"
+                                >
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-quiet text-danger">
+                                        <x-icon name="x" />Cancel<span class="sr-only"> order {{ $order->order_number }}</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+
+        <section class="rounded-2xl border-2 border-line bg-surface">
+            <h2 class="flex flex-wrap items-center gap-3 border-b-2 border-line px-5 py-4 text-xl font-bold">
+                Stock alerts
+                <span class="badge bg-danger-soft text-base text-danger tabular-nums">{{ $outOfStock->count() }} out of stock</span>
+                <span class="badge bg-rx-soft text-base text-rx tabular-nums">{{ $lowStock->count() }} running low</span>
+            </h2>
+            <ul class="divide-y-2 divide-line">
+                @forelse ($outOfStock->concat($lowStock) as $medicine)
+                    <li class="flex items-center justify-between gap-4 px-5 py-3">
+                        <span>
+                            <span class="font-semibold">{{ $medicine->name }}</span>
+                            <span class="text-ink-muted">· {{ $medicine->drugLabel() }}</span>
+                        </span>
+                        @if ($medicine->isInStock())
+                            <span class="badge bg-rx-soft text-rx">{{ $medicine->stock }} left</span>
+                        @else
+                            <span class="badge bg-danger-soft text-danger">Out of stock</span>
+                        @endif
+                    </li>
+                @empty
+                    <li class="px-5 py-8 text-center text-ink-muted">Everything is well stocked.</li>
+                @endforelse
+            </ul>
+        </section>
+    </main>
+</x-layouts.kiosk>
