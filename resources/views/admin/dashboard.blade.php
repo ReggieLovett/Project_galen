@@ -99,4 +99,9 @@
             </ul>
         </section>
     </main>
+
+    {{-- Staff who walk away are signed out, so customers can't use the dashboard --}}
+    <x-idle-timer leave="Log out now">
+        For security, you'll be logged out and the kiosk will go back to the start screen in <strong class="text-ink tabular-nums" x-text="`${remaining} seconds`"></strong>.
+    </x-idle-timer>
 </x-layouts.kiosk>

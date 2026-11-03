@@ -36,7 +36,14 @@ Daniel Okafor (100318) has Ventolin on file instead, so his and Maria's prescrip
 
 ## Staff area (hidden)
 
-Nothing on the kiosk links to it. Open `/staff-portal/login` (set `KIOSK_ADMIN_PATH` to change it), or tap the logo on the "Touch to begin" screen five times quickly. One tap on the logo still starts a session.
+Nothing on the kiosk links to it. There are two ways in:
+
+- **On the kiosk itself:** tap the logo on the "Touch to begin" screen five times quickly. A kiosk browser runs full screen with no address bar, so this is the only way in there. One tap on the logo still starts a session.
+- **From another device**, such as the counter PC or a staff tablet on the same network: open `/staff-portal/login` on the kiosk server's address. Set `KIOSK_ADMIN_PATH` to change the path.
+
+On the kiosk, tapping the email or password field opens the on-screen keyboard. It has Shift (for one capital letter) and a row of symbols, so staff don't need a physical keyboard. "Go" moves from email to password, then logs in. Passwords can only use the letters, numbers and symbols on that keyboard.
+
+The login page and the dashboard use the same "Are you still there?" timer as the shopping screen. If nobody answers, staff are logged out and the kiosk goes back to "Touch to begin", so a customer can't use a dashboard someone left open. **Log out** also goes straight back to "Touch to begin".
 
 - The seeded admin uses `KIOSK_ADMIN_EMAIL` / `KIOSK_ADMIN_PASSWORD` from `.env`.
 - Add or reset admins with `php artisan kiosk:admin someone@example.com --name="Their Name"`. There is no public register page.

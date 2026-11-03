@@ -104,8 +104,28 @@ test('login attempts are rate limited', function () {
 test('staff can log out', function () {
     $this->actingAs(staffMember(), 'admin')
         ->post(route('admin.logout'))
-        ->assertRedirect(route('admin.login'))
-        ->assertSessionHas('success');
+        ->assertRedirect(route('welcome'));
+
+    $this->assertGuest('admin');
+});
+
+test('the staff login can be typed on the touch screen', function () {
+    $this->get(route('admin.login'))
+        ->assertOk()
+        ->assertSee('inputmode="none"', false)
+        ->assertSee('aria-label="On-screen keyboard"', false)
+        ->assertSee('Shift')
+        ->assertSee("press('@')", false); // the full keyboard has @ for emails
+});
+
+test('staff pages return to the start screen when left alone', function () {
+    $this->get(route('admin.login'))->assertSee(route('kiosk.reset'));
+
+    $this->actingAs(staffMember(), 'admin')
+        ->get(route('admin.dashboard'))
+        ->assertSee(route('kiosk.reset'));
+
+    $this->post(route('kiosk.reset'))->assertRedirect(route('welcome'));
 
     $this->assertGuest('admin');
 });

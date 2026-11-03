@@ -7,7 +7,7 @@
 
         <header class="flex items-center justify-between px-8 pt-8 sm:px-12 sm:pt-10">
             {{-- Hidden staff entrance: five quick taps on the logo. One tap still begins. --}}
-            <div x-data="staffDoor(@js(route('admin.login')))" x-on:click="tap()" class="relative z-20 flex cursor-pointer items-center gap-4">
+            <div x-data="staffDoor(@js(route('admin.login')))" x-on:click="tap()" class="relative z-20 flex cursor-pointer touch-manipulation items-center gap-4">
                 <x-logo-mark class="size-14 rounded-xl bg-white text-brand" />
                 <span class="font-display text-2xl font-bold tracking-tight">{{ config('kiosk.name') }}</span>
             </div>

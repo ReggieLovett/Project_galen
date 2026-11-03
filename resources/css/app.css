@@ -45,6 +45,11 @@
         overscroll-behavior: none;
     }
 
+    /* The on-screen keyboard covers the bottom of the screen, so a field scrolled into view stops above it. */
+    html.keyboard-open {
+        scroll-padding-bottom: 29rem;
+    }
+
     @media (min-width: 1600px) {
         html {
             font-size: 18px;

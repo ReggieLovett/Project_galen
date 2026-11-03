@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\KioskSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,15 +48,12 @@ class AuthController extends Controller
     }
 
     /**
-     * LOGOUT - ends the session
+     * LOGOUT - ends the session and hands the screen back to customers
      */
     public function logout(Request $request): RedirectResponse
     {
-        Auth::guard('admin')->logout();
+        KioskSession::end($request);
 
-        $request->session()->invalidate(); // throws away the session data
-        $request->session()->regenerateToken(); // regenerate CSRF token
-
-        return to_route('admin.login')->with('success', 'You have been logged out.');
+        return to_route('welcome');
     }
 }

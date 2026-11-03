@@ -37,9 +37,10 @@ return [
     | Staff area
     |--------------------------------------------------------------------------
     |
-    | Nothing on the kiosk links here. Staff open it by URL, or by tapping
-    | the logo on the "Touch to begin" screen five times in a row. The
-    | seeded admin uses the email and password below.
+    | Nothing on the kiosk links here. On the kiosk itself, staff tap the
+    | logo on the "Touch to begin" screen five times in a row (a kiosk
+    | browser has no address bar). Other devices open the URL. The seeded
+    | admin uses the email and password below.
     |
     */
 

@@ -445,55 +445,12 @@
     @endif
 
     {{-- ================= Still there? ================= --}}
-    <div x-data="idleTimer({ timeout: {{ config('kiosk.idle_timeout') }}, countdown: {{ config('kiosk.idle_countdown') }} })">
-        <form x-ref="reset" method="POST" action="{{ route('kiosk.reset') }}" class="hidden">@csrf</form>
-        <div x-show="open" x-cloak x-trap.noscroll="open" class="fixed inset-0 z-[80] flex items-center justify-center p-5" role="alertdialog" aria-modal="true" aria-labelledby="idle-title" aria-describedby="idle-message">
-            <div class="absolute inset-0 bg-ink/70"></div>
-            <div class="relative w-full max-w-md rounded-2xl bg-surface p-8 text-center">
-                <span class="mx-auto flex size-20 items-center justify-center rounded-full bg-sunken text-ink"><x-icon name="clock" :size="40" /></span>
-                <h2 id="idle-title" class="mt-5 text-3xl font-bold">Are you still there?</h2>
-                <p id="idle-message" class="mt-3 text-lg text-ink-muted">
-                    For your privacy, we'll clear this basket in <strong class="text-ink tabular-nums" x-text="`${remaining} seconds`"></strong>.
-                </p>
-                <div class="mt-8 flex flex-col gap-3">
-                    <button type="button" x-on:click="stillHere()" class="btn btn-primary" autofocus>I'm still here</button>
-                    <button type="button" x-on:click="$refs.reset.submit()" class="btn btn-quiet">Start over</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-idle-timer>
+        For your privacy, we'll clear this basket in <strong class="text-ink tabular-nums" x-text="`${remaining} seconds`"></strong>.
+    </x-idle-timer>
 
     {{-- ================= On-screen keyboard ================= --}}
-    <div
-        x-data="keyboard"
-        x-on:keyboard-toggle.window="toggle($event.detail)"
-        x-on:keyboard-show.window="show($event.detail)"
-        x-show="open"
-        x-cloak
-        x-transition:enter="transition duration-200 ease-out-quart"
-        x-transition:enter-start="translate-y-full"
-        class="fixed inset-x-0 bottom-0 z-[70] border-t-2 border-line-strong bg-sunken px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-        role="group"
-        aria-label="On-screen keyboard"
-    >
-        <div class="mx-auto max-w-5xl space-y-2">
-            @foreach (['1234567890', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'] as $row)
-                <div class="flex justify-center gap-2 {{ $loop->iteration === 3 ? 'px-[5%]' : '' }}">
-                    @foreach (str_split($row) as $key)
-                        <button type="button" x-on:mousedown.prevent x-on:click="press('{{ $key }}')" class="key" tabindex="-1">{{ $key }}</button>
-                    @endforeach
-                    @if ($loop->last)
-                        <button type="button" x-on:mousedown.prevent x-on:click="press('backspace')" class="key max-w-36 flex-[1.6]" tabindex="-1" aria-label="Backspace"><x-icon name="delete" /></button>
-                    @endif
-                </div>
-            @endforeach
-            <div class="flex gap-2">
-                <button type="button" x-on:mousedown.prevent x-on:click="press('clear')" class="key max-w-40 text-base normal-case" tabindex="-1">Clear</button>
-                <button type="button" x-on:mousedown.prevent x-on:click="press('space')" class="key flex-[5] text-base normal-case" tabindex="-1">Space</button>
-                <button type="button" x-on:mousedown.prevent x-on:click="press('enter')" class="key max-w-48 flex-[1.5] bg-brand! text-base text-white! normal-case shadow-[0_2px_0_var(--color-brand-hover)]!" tabindex="-1">Go</button>
-            </div>
-        </div>
-    </div>
+    <x-on-screen-keyboard />
 
     {{-- ================= Flash messages (like the notes app's x-alert) ================= --}}
     <div class="pointer-events-none fixed inset-x-0 bottom-24 z-[90] flex justify-center px-4 lg:bottom-8" role="status">

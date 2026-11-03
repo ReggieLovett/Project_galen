@@ -44,15 +44,18 @@ Alpine.data('idleTimer', ({ timeout, countdown }) => ({
     },
 }));
 
-// On-screen keyboard. It types into the input whose id it was opened for;
-// "Go" submits that input's form.
+// On-screen keyboard. It types into the input whose id it was opened for.
+// "Go" moves on to the form's next empty keyboard field, like email then
+// password, and submits once they are all filled. Shift lasts one letter.
 Alpine.data('keyboard', () => ({
     open: false,
     target: null,
+    shift: false,
 
     show(id) {
         this.target = id;
         this.open = true;
+        this.$nextTick(() => document.getElementById(id)?.scrollIntoView({ block: 'nearest' }));
     },
 
     toggle(id) {
@@ -63,7 +66,19 @@ Alpine.data('keyboard', () => ({
         const input = document.getElementById(this.target);
         if (!input) return;
 
+        if (key === 'shift') {
+            this.shift = !this.shift;
+            return;
+        }
+
         if (key === 'enter') {
+            const next = [...(input.form?.querySelectorAll('input[inputmode="none"]') ?? [])].find((field) => field !== input && !field.value);
+            if (next) {
+                this.show(next.id);
+                next.focus();
+                return;
+            }
+
             this.open = false;
             input.form?.requestSubmit();
             return;
@@ -71,7 +86,11 @@ Alpine.data('keyboard', () => ({
 
         if (key === 'backspace') input.value = input.value.slice(0, -1);
         else if (key === 'clear') input.value = '';
-        else input.value = (input.value + (key === 'space' ? ' ' : key)).slice(0, input.maxLength > 0 ? input.maxLength : undefined);
+        else {
+            const typed = key === 'space' ? ' ' : this.shift ? key.toUpperCase() : key;
+            this.shift = false;
+            input.value = (input.value + typed).slice(0, input.maxLength > 0 ? input.maxLength : undefined);
+        }
 
         input.focus();
     },
