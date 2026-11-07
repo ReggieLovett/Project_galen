@@ -30,7 +30,10 @@ return [
 
     'receipt_timeout' => (int) env('KIOSK_RECEIPT_TIMEOUT', 30),
 
-    'max_quantity_per_item' => 10,
+    // Most pieces (or boxes) of one medicine a customer may take per visit.
+    // Empty: no limit, only shelf stock, so one customer can buy 11 tablets
+    // and the next 3. Set KIOSK_MAX_PER_ITEM to a number to cap it.
+    'max_quantity_per_item' => is_numeric(env('KIOSK_MAX_PER_ITEM')) ? (int) env('KIOSK_MAX_PER_ITEM') : null,
 
     /*
     |--------------------------------------------------------------------------

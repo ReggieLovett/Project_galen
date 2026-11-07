@@ -1,17 +1,24 @@
 @props(['medicine', 'inBasket' => [], 'panel' => null, 'compact' => false])
 
 {{-- One medicine in the catalogue, or (compact) in an assistant reply.
-     "Add to basket" opens x-packaging-chooser, where +/- counters pick how
-     many strips and boxes; it sends one plain form. "panel" tells the
-     controller which drawer to reopen. --}}
+     The card shows the medicine first. Tapping its picture or "What is it
+     for?" opens the plain-language description; scrolling the catalogue
+     closes it again (medicineDetails in resources/js/app.js). The +/-
+     counters (x-packaging-chooser) are on the card itself: single pieces
+     and whole boxes, both starting at 0. "panel" tells the controller
+     which drawer to reopen. --}}
 @php
-    $chooserKey = ($panel ?? 'shelf').'-'.$medicine->id;
+    $key = ($panel ?? 'shelf').'-'.$medicine->id;
+    $canCount = $medicine->isInStock() && \Illuminate\Support\Facades\Gate::allows('addToBasket', $medicine);
     $inBasketSummary = collect($inBasket)
-        ->map(fn (int $quantity, string $packaging) => \App\Enums\Packaging::from($packaging)->count($quantity))
+        ->map(fn (int $quantity, string $packaging) => $medicine->countOf(\App\Enums\Packaging::from($packaging), $quantity))
         ->join(' and ');
 @endphp
 
 <li @if (! $panel) id="medicine-{{ $medicine->id }}" @endif
+    x-data="medicineDetails(@js($key))"
+    x-on:catalogue-scroll.window="scrolled($event.detail)"
+    x-on:details-opened.window="$event.detail !== key && (open = false)"
     {{ $attributes->class([
         'flex scroll-mt-4 flex-col overflow-hidden rounded-2xl border-2 bg-surface transition-[border-color,box-shadow] duration-200',
         'border-brand shadow-[0_10px_30px_-18px_rgb(215_25_32/0.6)]' => $inBasket,
@@ -21,21 +28,20 @@
 
     @if ($compact)
         <div class="flex items-start gap-4 p-4">
-            <x-medicine-picture :medicine="$medicine" class="size-20 shrink-0 rounded-xl" />
+            <x-medicine-picture :medicine="$medicine" x-on:click="toggle()" class="size-20 shrink-0 cursor-pointer rounded-xl" />
             <div class="min-w-0 flex-1">
                 <h3 class="text-lg leading-snug font-bold text-pretty">{{ $medicine->fullName() }}</h3>
                 <p class="font-semibold">{{ $medicine->drugLabel() }}</p>
-                <p class="text-ink-muted"><x-money :amount="$medicine->strip_price" /> a strip · <x-money :amount="$medicine->box_price" /> a box</p>
-                @if ($medicine->description)
-                    <p class="mt-1 text-sm leading-snug text-ink-muted">{{ $medicine->description }}</p>
-                @endif
+                @unless ($canCount)
+                    <p class="text-ink-muted"><x-money :amount="$medicine->piece_price" /> a {{ $medicine->pieceName(1) }} · <x-money :amount="$medicine->box_price" /> a box</p>
+                @endunless
                 @if ($medicine->requiresPrescription())
                     <p class="mt-2"><span class="badge bg-rx-soft text-rx"><x-icon name="shield-check" :size="16" />Prescription</span></p>
                 @endif
             </div>
         </div>
     @else
-        <div class="relative">
+        <div class="relative cursor-pointer" x-on:click="toggle()">
             <x-medicine-picture :medicine="$medicine" @class(['h-36 w-full', 'grayscale-[0.6] opacity-75' => ! $medicine->isInStock()]) />
 
             <div class="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
@@ -48,7 +54,7 @@
                 @if (! $medicine->isInStock())
                     <span class="badge bg-sunken text-ink-muted shadow-sm">Out of stock</span>
                 @elseif ($medicine->isLowStock())
-                    <span class="badge bg-rx-soft text-rx shadow-sm">Only {{ \App\Enums\Packaging::Strip->count($medicine->stock) }} left</span>
+                    <span class="badge bg-rx-soft text-rx shadow-sm">Only {{ $medicine->countOf(\App\Enums\Packaging::Piece, $medicine->stock) }} left</span>
                 @else
                     <span class="badge bg-surface/90 text-ok shadow-sm"><span class="size-2 rounded-full bg-ok"></span>In stock</span>
                 @endif
@@ -60,22 +66,34 @@
         @unless ($compact)
             <h3 class="text-xl leading-snug font-bold text-pretty">{{ $medicine->fullName() }}</h3>
             <p class="mt-0.5 text-lg leading-snug font-semibold">{{ $medicine->drugLabel() }}</p>
-            <p class="mt-0.5 text-ink-muted">{{ $medicine->dosage_form }} · {{ $medicine->pieces_per_strip }} per strip</p>
+            <p class="mt-0.5 text-ink-muted">{{ $medicine->dosage_form }} · box of {{ $medicine->piecesPerBox() }}</p>
+        @endunless
 
-            @if ($medicine->description)
-                {{-- What it's for, in plain words --}}
-                <p class="mt-3 border-l-4 border-brand-soft pl-3 leading-snug">
-                    <span class="sr-only">What it's for: </span>{{ $medicine->description }}
-                </p>
-            @endif
+        @if ($medicine->description)
+            {{-- What it's for, in plain words: hidden until the customer asks --}}
+            <button
+                type="button"
+                x-on:click="toggle()"
+                x-bind:aria-expanded="open"
+                aria-controls="uses-{{ $key }}"
+                class="focus-ring mt-2 inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg font-semibold text-brand"
+            >
+                <x-icon name="info" :size="18" />
+                <span x-text="open ? 'Hide details' : 'What is it for?'">What is it for?</span>
+            </button>
+            <p id="uses-{{ $key }}" x-show="open" x-cloak x-transition.opacity.duration.150ms class="mt-1 rounded-xl bg-sunken p-3 leading-snug">
+                {{ $medicine->description }}
+            </p>
+        @endif
 
+        @unless ($compact || $canCount)
             <div class="mt-auto flex items-end justify-between gap-3 pt-5">
                 <p class="leading-tight">
-                    <span class="block text-sm text-ink-muted">Per strip</span>
-                    <x-money :amount="$medicine->strip_price" class="font-display text-2xl font-extrabold whitespace-nowrap" />
+                    <span class="block text-sm text-ink-muted">Per {{ $medicine->pieceName(1) }}</span>
+                    <x-money :amount="$medicine->piece_price" class="font-display text-2xl font-extrabold whitespace-nowrap" />
                 </p>
                 <p class="text-right leading-tight">
-                    <span class="block text-sm text-ink-muted">Box of {{ $medicine->strips_per_box }} strips</span>
+                    <span class="block text-sm text-ink-muted">Box of {{ $medicine->piecesPerBox() }}</span>
                     <x-money :amount="$medicine->box_price" class="font-display text-lg font-bold whitespace-nowrap" />
                 </p>
             </div>
@@ -95,11 +113,8 @@
                 <input type="hidden" name="medicine_id" value="{{ $medicine->id }}">
                 <button type="submit" class="btn btn-assist w-full"><x-icon name="sparkles" />Find alternatives</button>
             </form>
-        @elsecan('addToBasket', $medicine)
-            <button type="button" x-on:click="pack = @js($chooserKey)" class="btn btn-primary {{ $compact ? 'mt-3' : 'mt-4' }} w-full">
-                <x-icon name="plus" />{{ $inBasket ? 'Add more' : 'Add to basket' }}
-            </button>
-            <x-packaging-chooser :medicine="$medicine" :key="$chooserKey" :panel="$panel" :in-basket="$inBasket" />
+        @elseif ($canCount)
+            <x-packaging-chooser :medicine="$medicine" :panel="$panel" :in-basket="$inBasket" @class(['mt-auto pt-4' => ! $compact, 'mt-3' => $compact]) />
         @else
             {{-- Needs a prescription on file: the controller answers with the "Prescription required" popup. --}}
             <form method="POST" action="{{ route('basket.store', $medicine) }}" class="{{ $compact ? 'mt-3' : 'mt-4' }}">

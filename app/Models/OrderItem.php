@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['medicine_id', 'name', 'brand', 'strength', 'packaging', 'unit_price', 'quantity', 'strip_count', 'line_total'])]
+#[Fillable(['medicine_id', 'name', 'brand', 'strength', 'packaging', 'unit_price', 'quantity', 'piece_count', 'line_total'])]
 class OrderItem extends Model
 {
     /**
@@ -22,16 +22,21 @@ class OrderItem extends Model
             'unit_price' => 'decimal:2',
             'line_total' => 'decimal:2',
             'quantity' => 'integer',
-            'strip_count' => 'integer',
+            'piece_count' => 'integer',
         ];
     }
 
     /**
-     * "2 strips of Biogesic", "1 box of Amoxil": what the counter fetches.
+     * "11 tablets of Biogesic", "1 box of Amoxil": what the counter fetches.
+     * Load the medicine first for "tablets"; without it, "11 pieces".
      */
     public function summary(): string
     {
-        return "{$this->packaging->count($this->quantity)} of {$this->name}";
+        $count = $this->relationLoaded('medicine') && $this->medicine
+            ? $this->medicine->countOf($this->packaging, $this->quantity)
+            : $this->packaging->count($this->quantity);
+
+        return "{$count} of {$this->name}";
     }
 
     /**

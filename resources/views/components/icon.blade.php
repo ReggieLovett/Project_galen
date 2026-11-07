@@ -3,6 +3,7 @@
 @php
     // Lucide icons (ISC licence), inlined so the kiosk works offline.
     $paths = [
+        'arrow-left' => '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
         'arrow-right' => '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
         'basket' => '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
         'card' => '<rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/>',

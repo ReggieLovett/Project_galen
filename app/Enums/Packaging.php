@@ -5,27 +5,28 @@ namespace App\Enums;
 use Illuminate\Support\Str;
 
 /**
- * How the customer takes a medicine home. Shelf stock is counted in strips,
- * so a box takes the medicine's `strips_per_box` strips off the shelf.
+ * How the customer takes a medicine home: any number of single pieces
+ * (tablets, capsules), or whole boxes. Shelf stock is counted in pieces, so
+ * a box takes Medicine::piecesPerBox() pieces off the shelf.
  */
 enum Packaging: string
 {
-    /** A single blister strip ("banig"). */
-    case Strip = 'strip';
+    /** One tablet, capsule or caplet, cut from the blister ("tingi"). */
+    case Piece = 'piece';
 
-    /** A sealed box of several strips. */
+    /** A sealed box. */
     case Box = 'box';
 
     public function label(): string
     {
         return match ($this) {
-            self::Strip => 'Strip',
+            self::Piece => 'Piece',
             self::Box => 'Box',
         };
     }
 
     /**
-     * "1 strip", "3 boxes".
+     * "1 piece", "3 boxes". Medicine::countOf() says "11 tablets" instead.
      */
     public function count(int $quantity): string
     {

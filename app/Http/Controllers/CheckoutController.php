@@ -53,7 +53,7 @@ class CheckoutController extends Controller
 
         // Re-check everything: stock may have sold out, and the basket must
         // never hold a prescription item this customer can't buy. A medicine
-        // bought by the strip and by the box draws on the same strips.
+        // bought as single pieces and by the box draws on the same pieces.
         foreach ($lines->pluck('medicine')->unique('id') as $medicine) {
             if (Gate::denies('addToBasket', $medicine)) {
                 throw ValidationException::withMessages([
@@ -61,9 +61,9 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            if ($medicine->stock < $cart->stripsOf($medicine)) {
+            if ($medicine->stock < $cart->piecesOf($medicine)) {
                 throw ValidationException::withMessages([
-                    'basket' => 'Sorry, only '.Packaging::Strip->count($medicine->stock)." of {$medicine->name} left. Please update your basket.",
+                    'basket' => 'Sorry, only '.$medicine->countOf(Packaging::Piece, $medicine->stock)." of {$medicine->name} left. Please update your basket.",
                 ]);
             }
         }
@@ -79,7 +79,7 @@ class CheckoutController extends Controller
 
         foreach ($lines as $line) {
             $medicine = $line['medicine'];
-            $strips = $line['quantity'] * $medicine->stripsPer($line['packaging']);
+            $pieces = $line['quantity'] * $medicine->piecesPer($line['packaging']);
 
             $order->items()->create([
                 'medicine_id' => $medicine->id,
@@ -89,12 +89,12 @@ class CheckoutController extends Controller
                 'packaging' => $line['packaging'],
                 'unit_price' => $line['unit_price'],
                 'quantity' => $line['quantity'],
-                'strip_count' => $strips,
+                'piece_count' => $pieces,
                 'line_total' => $line['line_total'],
             ]);
 
             // Held for this order until the cashier completes or cancels it.
-            $medicine->decrement('stock', $strips);
+            $medicine->decrement('stock', $pieces);
         }
 
         return $order;

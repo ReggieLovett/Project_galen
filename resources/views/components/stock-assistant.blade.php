@@ -14,7 +14,7 @@
         'Which one is cheaper?',
         'Do they need a prescription?',
         'What is it for?',
-        'How many are in a strip and a box?',
+        'How many are in a box?',
     ];
 
     $hasContext = $conversation->contains(fn (array $entry) => $entry['about']->isNotEmpty());

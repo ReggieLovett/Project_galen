@@ -77,10 +77,10 @@
             @foreach ($order->items as $item)
                 <li>
                     <div class="flex justify-between gap-4">
-                        <span>{{ $item->quantity }} × {{ $item->name }}</span>
+                        <span>{{ $item->summary() }}</span>
                         <span class="tabular-nums"><x-money :amount="$item->line_total" /></span>
                     </div>
-                    <p class="text-ink-muted">{{ $item->packaging->label() }} · {{ $item->strength }} · <x-money :amount="$item->unit_price" /> per {{ Str::lower($item->packaging->label()) }}</p>
+                    <p class="text-ink-muted">{{ $item->medicine?->packDescription($item->packaging) ?? $item->packaging->label() }} · {{ $item->strength }} · <x-money :amount="$item->unit_price" /> each</p>
                 </li>
             @endforeach
         </ul>

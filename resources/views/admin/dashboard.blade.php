@@ -88,7 +88,7 @@
                             <span class="text-ink-muted">· {{ $medicine->drugLabel() }}</span>
                         </span>
                         @if ($medicine->isInStock())
-                            <span class="badge bg-rx-soft text-rx">{{ \App\Enums\Packaging::Strip->count($medicine->stock) }} left</span>
+                            <span class="badge bg-rx-soft text-rx">{{ $medicine->countOf(\App\Enums\Packaging::Piece, $medicine->stock) }} left</span>
                         @else
                             <span class="badge bg-danger-soft text-danger">Out of stock</span>
                         @endif

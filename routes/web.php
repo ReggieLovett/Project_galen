@@ -16,6 +16,7 @@ Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk');        /
 Route::post('/reset', [KioskController::class, 'reset'])->name('kiosk.reset');
 
 // BASKET ROUTES
+Route::post('/kiosk/basket/clear', [BasketController::class, 'clear'])->name('basket.clear');
 Route::post('/kiosk/basket/{medicine}', [BasketController::class, 'store'])->name('basket.store');
 Route::put('/kiosk/basket/{medicine}', [BasketController::class, 'update'])->name('basket.update');
 Route::delete('/kiosk/basket/{medicine}', [BasketController::class, 'destroy'])->name('basket.destroy');

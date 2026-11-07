@@ -1,14 +1,63 @@
 import Alpine from 'alpinejs';
 import focus from '@alpinejs/focus';
 
-// Every kiosk action is a normal form post handled by a Laravel controller.
-// This file only adds the touch-screen helpers around those forms.
+// Every kiosk action is handled by a Laravel controller. Basket forms use
+// fetch so the catalogue and basket can be refreshed without navigating away.
+document.addEventListener('submit', async (event) => {
+    if (event.defaultPrevented || !(event.target instanceof HTMLFormElement)) return;
 
-// A double tap must not add the same medicine twice: once a form is sent,
-// its buttons stay disabled until the next page loads.
-document.addEventListener('submit', (event) => {
-    if (event.defaultPrevented) return;
-    event.target.querySelectorAll('button').forEach((button) => (button.disabled = true));
+    const form = event.target;
+    const buttons = form.querySelectorAll('button');
+    const isBasketAction = new URL(form.action, window.location.origin).pathname.includes('/kiosk/basket');
+
+    if (!isBasketAction) {
+        buttons.forEach((button) => (button.disabled = true));
+        return;
+    }
+
+    event.preventDefault();
+
+    if (form.dataset.submitting === 'true') return;
+
+    form.dataset.submitting = 'true';
+    buttons.forEach((button) => (button.disabled = true));
+
+    const catalogue = document.querySelector('[data-kiosk-region="catalogue"]');
+    const catalogueScrollTop = catalogue?.querySelector('[data-catalogue]')?.scrollTop ?? 0;
+
+    try {
+        const response = await fetch(form.action, {
+            method: form.method || 'GET',
+            body: new FormData(form),
+            headers: {
+                Accept: 'text/html',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) throw new Error(`Basket request failed: ${response.status}`);
+
+        const documentHtml = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const currentRegions = document.querySelectorAll('[data-kiosk-region]');
+
+        currentRegions.forEach((region) => {
+            const replacement = documentHtml.querySelector(`[data-kiosk-region="${region.dataset.kioskRegion}"]`);
+
+            if (!replacement) throw new Error(`Missing kiosk region: ${region.dataset.kioskRegion}`);
+
+            Alpine.destroyTree(region);
+            region.replaceWith(replacement);
+            Alpine.initTree(replacement);
+        });
+
+        history.replaceState(null, '', response.url);
+
+        document.querySelector('[data-catalogue]')?.scrollTo({ top: catalogueScrollTop });
+    } catch (error) {
+        console.error('Unable to update the basket without navigating.', error);
+        window.location.reload();
+    }
 });
 
 // Never show a previous customer's screen from the back/forward cache.
@@ -96,6 +145,32 @@ Alpine.data('keyboard', () => ({
     },
 }));
 
+// Scroll the category chips in a predictable touch-sized step. The arrows
+// remain hidden when there is no more content in that direction.
+Alpine.data('horizontalScroller', () => ({
+    atStart: true,
+    atEnd: false,
+
+    init() {
+        this.update = () => {
+            const scroller = this.$refs.scroller;
+            this.atStart = scroller.scrollLeft <= 1;
+            this.atEnd = scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1;
+        };
+
+        this.$refs.scroller.addEventListener('scroll', this.update, { passive: true });
+        window.addEventListener('resize', this.update);
+        this.$nextTick(this.update);
+    },
+
+    scrollBy(direction) {
+        this.$refs.scroller.scrollBy({
+            left: direction * Math.max(220, this.$refs.scroller.clientWidth * 0.65),
+            behavior: 'smooth',
+        });
+    },
+}));
+
 Alpine.data('receipt', ({ seconds, home }) => ({
     seconds,
     remaining: seconds,
@@ -122,23 +197,20 @@ Alpine.data('receipt', ({ seconds, home }) => ({
     },
 }));
 
-// The +/- counters in the "How many would you like?" chooser. Strips and
-// boxes come off the same shelf stock (counted in strips), so adding a box
-// lowers how many strips are left and the other way round. `lineLeft` is
-// what the per-item limit still allows after the basket. The server checks
-// everything again when the form is sent.
-Alpine.data('packCounter', ({ shelf, stripsPerBox, lineLeft, prices, currency }) => ({
-    counts: { strip: 0, box: 0 },
-
-    init() {
-        if (this.max('strip') > 0) this.counts.strip = 1;
-    },
+// The +/- counters on each medicine card: single pieces (tablets, capsules)
+// and whole boxes, both starting at 0. They come off the same shelf stock,
+// counted in pieces, so adding a box lowers how many single pieces are left
+// and the other way round. `lineLeft` is what a per-item limit still allows
+// after the basket (null: no limit). The server checks everything again
+// when the form is sent.
+Alpine.data('packCounter', ({ shelf, piecesPerBox, lineLeft, prices, currency }) => ({
+    counts: { piece: 0, box: 0 },
 
     max(packaging) {
-        const stripsPer = packaging === 'box' ? stripsPerBox : 1;
-        const heldByOther = packaging === 'box' ? this.counts.strip : this.counts.box * stripsPerBox;
+        const piecesPer = packaging === 'box' ? piecesPerBox : 1;
+        const heldByOther = packaging === 'box' ? this.counts.piece : this.counts.box * piecesPerBox;
 
-        return Math.max(0, Math.min(lineLeft[packaging], Math.floor((shelf - heldByOther) / stripsPer)));
+        return Math.max(0, Math.min(lineLeft[packaging] ?? Infinity, Math.floor((shelf - heldByOther) / piecesPer)));
     },
 
     step(packaging, by) {
@@ -146,24 +218,43 @@ Alpine.data('packCounter', ({ shelf, stripsPerBox, lineLeft, prices, currency })
     },
 
     get empty() {
-        return this.counts.strip + this.counts.box === 0;
+        return this.counts.piece + this.counts.box === 0;
     },
 
     get total() {
-        return this.counts.strip * prices.strip + this.counts.box * prices.box;
+        return this.counts.piece * prices.piece + this.counts.box * prices.box;
     },
 
-    get summary() {
-        const parts = [
-            this.counts.strip && `${this.counts.strip} ${this.counts.strip === 1 ? 'strip' : 'strips'}`,
-            this.counts.box && `${this.counts.box} ${this.counts.box === 1 ? 'box' : 'boxes'}`,
-        ].filter(Boolean);
-
-        return parts.length ? parts.join(' and ') : 'Tap + to choose how many';
+    // A counter has reached what we can sell, so its + is greyed out.
+    get atLimit() {
+        return ['piece', 'box'].some((packaging) => this.counts[packaging] > 0 && this.counts[packaging] >= this.max(packaging));
     },
 
     money(amount) {
         return new Intl.NumberFormat('en', { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).format(amount);
+    },
+}));
+
+// A medicine card's "What is it for?" description. Tapping the card's
+// picture or the button opens it, and closes any other card's. Scrolling
+// the catalogue on by more than a little closes it again, so the list
+// stays short while the customer browses.
+Alpine.data('medicineDetails', (key) => ({
+    key,
+    open: false,
+    openedAt: 0,
+
+    toggle() {
+        this.open = !this.open;
+
+        if (this.open) {
+            this.openedAt = this.$root.closest('[data-catalogue]')?.scrollTop ?? 0;
+            this.$dispatch('details-opened', key);
+        }
+    },
+
+    scrolled(top) {
+        if (this.open && Math.abs(top - this.openedAt) > 64) this.open = false;
     },
 }));
 

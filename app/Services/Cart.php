@@ -13,10 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * The kiosk basket, kept in the session as
- * [medicine id => [packaging => quantity]], e.g. [7 => ['strip' => 2, 'box' => 1]].
+ * [medicine id => [packaging => quantity]], e.g. [7 => ['piece' => 11, 'box' => 1]].
  *
- * A medicine can be in the basket by the strip and by the box at the same
- * time. Both draw on the same shelf stock, which is counted in strips.
+ * A medicine can be in the basket as single pieces and by the box at the
+ * same time. Both draw on the same shelf stock, which is counted in pieces.
  */
 class Cart
 {
@@ -48,12 +48,12 @@ class Cart
     }
 
     /**
-     * How many strips of this medicine the basket would take off the shelf.
+     * How many pieces of this medicine the basket would take off the shelf.
      */
-    public function stripsOf(Medicine $medicine): int
+    public function piecesOf(Medicine $medicine): int
     {
         return collect($this->quantities()[$medicine->id] ?? [])
-            ->sum(fn (int $quantity, string $packaging) => $quantity * $medicine->stripsPer(Packaging::from($packaging)));
+            ->sum(fn (int $quantity, string $packaging) => $quantity * $medicine->piecesPer(Packaging::from($packaging)));
     }
 
     public function add(Medicine $medicine, Packaging $packaging, int $quantity = 1): void
@@ -62,10 +62,11 @@ class Cart
     }
 
     /**
-     * Add strips and boxes of one medicine in one tap. Either all of it fits
-     * the shelf stock and the per-item limit, or nothing is added.
+     * Add pieces and boxes of one medicine in one tap. Either all of it fits
+     * the shelf stock (and the per-item limit, when one is set), or nothing
+     * is added.
      *
-     * @param  array<string, int>  $quantities  packaging value => how many to add, e.g. ['strip' => 2, 'box' => 1]
+     * @param  array<string, int>  $quantities  packaging value => how many to add, e.g. ['piece' => 11, 'box' => 1]
      *
      * @throws ValidationException
      */
@@ -87,8 +88,8 @@ class Cart
     }
 
     /**
-     * Set how many strips or boxes of a medicine the customer wants, capped
-     * by shelf stock and the per-item limit.
+     * Set how many pieces or boxes of a medicine the customer wants, capped
+     * by shelf stock and, when one is set, the per-item limit.
      *
      * @throws ValidationException
      */
@@ -107,15 +108,15 @@ class Cart
         }
 
         $onShelf = $this->onShelfFor($medicine, $packaging);
-        $limit = min($onShelf, config('kiosk.max_quantity_per_item'));
+        $limit = $this->maxQuantity($medicine, $packaging);
 
         if ($quantity > $limit) {
             throw ValidationException::withMessages([
                 'quantity' => match (true) {
-                    $onShelf === 0 && $packaging === Packaging::Box => "There isn't a full box of {$medicine->name} left. You can buy it by the strip.",
+                    $onShelf === 0 && $packaging === Packaging::Box => "There isn't a full box of {$medicine->name} left. You can buy single {$medicine->pieceName()} instead.",
                     $onShelf === 0 => "Your basket already has all the {$medicine->name} we have in stock.",
-                    $limit === $onShelf => "Only {$packaging->count($limit)} of {$medicine->name} left in stock.",
-                    default => "You can buy up to {$packaging->count($limit)} of {$medicine->name} per visit.",
+                    $limit === $onShelf => 'Only '.$medicine->countOf($packaging, $limit)." of {$medicine->name} left in stock.",
+                    default => 'You can buy up to '.$medicine->countOf($packaging, $limit)." of {$medicine->name} per visit.",
                 },
             ]);
         }
@@ -124,11 +125,15 @@ class Cart
     }
 
     /**
-     * The most strips or boxes of this medicine the customer may have.
+     * The most pieces or boxes of this medicine the customer may have: what
+     * the shelf can still supply, or less if a per-item limit is set.
      */
     public function maxQuantity(Medicine $medicine, Packaging $packaging): int
     {
-        return min($this->onShelfFor($medicine, $packaging), config('kiosk.max_quantity_per_item'));
+        $onShelf = $this->onShelfFor($medicine, $packaging);
+        $perItemLimit = config('kiosk.max_quantity_per_item');
+
+        return $perItemLimit === null ? $onShelf : min($onShelf, (int) $perItemLimit);
     }
 
     /**
@@ -180,7 +185,7 @@ class Cart
     }
 
     /**
-     * The basket's lines, sorted by name (strip before box), with what each
+     * The basket's lines, sorted by name (pieces before boxes), with what each
      * one costs.
      *
      * @return Collection<int, array{medicine: Medicine, packaging: Packaging, quantity: int, unit_price: string, line_total: float, max_quantity: int}>
@@ -206,7 +211,7 @@ class Cart
     }
 
     /**
-     * How many strips and boxes are in the basket.
+     * How many pieces and boxes are in the basket.
      */
     public function count(): int
     {
@@ -224,9 +229,9 @@ class Cart
      */
     private function onShelfFor(Medicine $medicine, Packaging $packaging): int
     {
-        $stripsPer = $medicine->stripsPer($packaging);
-        $heldByOtherPackaging = $this->stripsOf($medicine) - $this->quantityOf($medicine, $packaging) * $stripsPer;
+        $piecesPer = $medicine->piecesPer($packaging);
+        $heldByOtherPackaging = $this->piecesOf($medicine) - $this->quantityOf($medicine, $packaging) * $piecesPer;
 
-        return max(0, intdiv($medicine->stock - $heldByOtherPackaging, $stripsPer));
+        return max(0, intdiv($medicine->stock - $heldByOtherPackaging, $piecesPer));
     }
 }

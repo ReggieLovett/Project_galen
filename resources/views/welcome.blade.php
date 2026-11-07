@@ -30,7 +30,7 @@
 
             <h1 class="text-6xl font-extrabold tracking-tight sm:text-8xl">Touch to begin</h1>
             <p class="mt-6 max-w-2xl text-xl leading-relaxed text-pretty text-white/90 sm:text-2xl">
-                Find your medicines, buy them by the strip or by the box, refill a prescription you have filled with us before, and pay at the counter.
+                Find your medicines, buy them by the piece or by the box, refill a prescription you have filled with us before, and pay at the counter.
             </p>
         </main>
 

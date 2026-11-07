@@ -65,7 +65,7 @@ class PharmacyAssistant
         'different', 'does', 'dosage', 'dose', 'doses', 'else', 'find', 'gamot', 'generic', 'have', 'instead',
         'kapareho', 'looking', 'magkano', 'many', 'medicine', 'medicines', 'much', 'need', 'other', 'para',
         'pareho', 'parehas', 'please', 'prescription', 'price', 'prices', 'replace', 'replacement', 'reseta',
-        'saan', 'same', 'similar', 'softgel', 'something', 'stock', 'strength', 'strip', 'strips', 'substitute',
+        'piece', 'pieces', 'saan', 'same', 'similar', 'softgel', 'something', 'stock', 'strength', 'strip', 'strips', 'substitute',
         'tablet', 'tablets', 'that', 'them', 'there', 'these', 'they', 'this', 'those', 'used', 'what', 'when',
         'where', 'which', 'with', 'would', 'your',
     ];
@@ -81,7 +81,7 @@ class PharmacyAssistant
 
         if ($medicine->isInStock()) {
             return new AssistantReply(
-                "Good news: {$medicine->fullName()} is in stock, at ".Money::format($medicine->strip_price).' a strip or '.Money::format($medicine->box_price).' a box. You can add it below.',
+                "Good news: {$medicine->fullName()} is in stock, at ".Money::format($medicine->piece_price).' a '.$medicine->pieceName(1).' or '.Money::format($medicine->box_price).' for a box of '.$medicine->piecesPerBox().'. You can add it below.',
                 requested: $medicine,
                 alternatives: new Collection([$medicine]),
             );
@@ -309,9 +309,8 @@ class PharmacyAssistant
             'active_ingredient' => $medicine->active_ingredient,
             'strength' => $medicine->strength,
             'dosage_form' => $medicine->dosage_form,
-            'strip' => $medicine->packDescription(Packaging::Strip),
             'box' => $medicine->packDescription(Packaging::Box),
-            'strip_price' => $medicine->strip_price,
+            'piece_price' => $medicine->piece_price,
             'box_price' => $medicine->box_price,
             'currency' => config('kiosk.currency'),
             'prescription_only' => $medicine->requiresPrescription(),

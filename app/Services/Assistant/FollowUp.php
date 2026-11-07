@@ -77,7 +77,7 @@ final class FollowUp
         }
 
         $sentences = $others->map(fn (Medicine $other) => match (true) {
-            self::sameDose($subject, $other) => "{$other->fullName()} is the same medicine as {$subject->fullName()}: ".self::doseOf($subject).'. Only the brand and the price differ: '.Money::format($other->strip_price).' a strip, compared with '.Money::format($subject->strip_price).'.',
+            self::sameDose($subject, $other) => "{$other->fullName()} is the same medicine as {$subject->fullName()}: ".self::doseOf($subject).'. Only the brand and the price differ: '.Money::format($other->piece_price).' a '.$other->pieceName(1).', compared with '.Money::format($subject->piece_price).'.',
             self::sameIngredients($subject, $other) => "{$other->fullName()} has the same active ".Str::plural('ingredient', count($subject->ingredients())).' as '.$subject->fullName().', '.self::ingredientsOf($subject).', but '.($other->strength === $subject->strength
                 ? 'it is a '.Str::lower($other->dosage_form).', not a '.Str::lower($subject->dosage_form).'.'
                 : "it is {$other->strength}, not {$subject->strength}."),
@@ -98,15 +98,15 @@ final class FollowUp
     {
         $sentences = $medicines->map(fn (Medicine $medicine) => $medicine->fullName()
             .($medicine->isInStock() ? '' : ' (out of stock)')
-            .' is '.Money::format($medicine->strip_price).' a strip, or '.Money::format($medicine->box_price)
-            ." for a box of {$medicine->strips_per_box} strips.");
+            .' is '.Money::format($medicine->piece_price).' a '.$medicine->pieceName(1).', or '.Money::format($medicine->box_price)
+            .' for a box of '.$medicine->piecesPerBox().'.');
 
         $inStock = $medicines->filter(fn (Medicine $medicine) => $medicine->isInStock());
 
         if ($inStock->count() > 1) {
-            $cheapest = $inStock->sortBy(fn (Medicine $medicine) => $medicine->strip_price / $medicine->pieces_per_strip)->first();
+            $cheapest = $inStock->sortBy(fn (Medicine $medicine) => (float) $medicine->piece_price)->first();
 
-            $sentences->push("{$cheapest->fullName()} is the cheapest per ".Str::singular($cheapest->pieceName()).'.');
+            $sentences->push("{$cheapest->fullName()} is the cheapest per ".$cheapest->pieceName(1).'.');
         }
 
         return $sentences->join(' ');
@@ -134,10 +134,10 @@ final class FollowUp
     private static function packaging(Collection $medicines): string
     {
         return $medicines->take(3)
-            ->map(fn (Medicine $medicine) => "{$medicine->fullName()} comes in a ".Str::lcfirst($medicine->packDescription(Packaging::Strip))
-                .' for '.Money::format($medicine->strip_price).', or a '.Str::lcfirst($medicine->packDescription(Packaging::Box))
+            ->map(fn (Medicine $medicine) => "{$medicine->fullName()} is sold by the ".$medicine->pieceName(1)
+                .' for '.Money::format($medicine->piece_price).' each, or in a '.Str::lcfirst($medicine->packDescription(Packaging::Box))
                 .' for '.Money::format($medicine->box_price).'.')
-            ->push('Tap Add to basket on a medicine to choose how many strips and boxes you want.')
+            ->push('Use the + and − buttons on a medicine to choose how many you want.')
             ->join(' ');
     }
 

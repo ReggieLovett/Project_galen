@@ -9,6 +9,50 @@ use Illuminate\Database\Seeder;
 class MedicineSeeder extends Seeder
 {
     /**
+     * Product photos stored in public/Images.
+     *
+     * @var array<string, string>
+     */
+    private const IMAGE_PATHS = [
+        'Biogesic' => 'Images/Biogesic.jpg',
+        'RiteMed Paracetamol' => 'Images/RiteMed Paracetamol.jpg',
+        'Panadol' => 'Images/Panadol.jpg',
+        'Advil' => 'Images/Advil.jpg',
+        'Medicol Advance' => 'Images/Medicol Advance.png',
+        'RiteMed Ibuprofen' => 'Images/RiteMed Ibuprofen.png',
+        'Alaxan FR' => 'Images/Alaxan FR.png',
+        'Dolfenal' => 'Images/Dolfenal.png',
+        'Neozep Forte' => 'Images/Neozep Forte.png',
+        'Bioflu' => 'Images/Bioflu.png',
+        'Solmux' => 'Images/Solmux.png',
+        'RiteMed Carbocisteine' => 'Images/RiteMed Carbocisteine.png',
+        'Ascof Lagundi' => 'Images/Ascof Lagundi.png',
+        'Claritin' => 'Images/Claritin.png',
+        'Allerta' => 'Images/Allerta.jpg',
+        'RiteMed Loratadine' => 'Images/RiteMed Loratadine.png',
+        'Virlix' => 'Images/Virlix.png',
+        'Kremil-S' => 'Images/Kremil-S.png',
+        'Diatabs' => 'Images/Diatabs.png',
+        'Imodium' => 'Images/Imodium.png',
+        'Buscopan' => 'Images/Buscopan.png',
+        'Poten-Cee' => 'Images/Poten-Cee.png',
+        'RiteMed Ascorbic Acid' => 'Images/RiteMed Ascorbic Acid.png',
+        'Fern-C' => 'Images/Fern-C.png',
+        'Amoxil' => 'Images/Amoxil.png',
+        'RiteMed Amoxicillin' => 'Images/RiteMed Amoxicillin.png',
+        'Augmentin' => 'Images/Augmentin.png',
+        'RiteMed Co-Amoxiclav' => 'Images/RiteMed Co-Amoxiclav.png',
+        'Norvasc' => 'Images/Norvasc.png',
+        'RiteMed Amlodipine' => 'Images/RiteMed Amlodipine.webp',
+        'Cozaar' => 'Images/Cozaar.png',
+        'RiteMed Losartan' => 'Images/RiteMed Losartan.png',
+        'Lipitor' => 'Images/Lipitor.png',
+        'RiteMed Atorvastatin' => 'Images/RiteMed Atorvastatin.png',
+        'Glucophage' => 'Images/Glucophage.png',
+        'RiteMed Metformin' => 'Images/RiteMed Metformin.png',
+    ];
+
+    /**
      * What each active ingredient is for, in plain words. Every brand with
      * the same ingredient gets the same text. These are label-style uses for
      * the customer, never dosing advice: that stays with the pharmacist.
@@ -42,8 +86,10 @@ class MedicineSeeder extends Seeder
      * Seed the catalogue: brands sold in Philippine drugstores, priced in
      * pesos. Prices are sample figures for the demo, not a price list.
      *
-     * Every medicine comes in blister strips, sold one strip at a time or
-     * by the box. Stock is counted in strips.
+     * Customers buy any number of single pieces (tablets, capsules), cut
+     * from the blister strip, or whole boxes. Each row says how the pack is
+     * made up (pieces per strip, strips per box) and prices one piece and
+     * one box. Stock is counted in pieces.
      *
      * Prescription (Rx) medicines are the ones the Philippine FDA registers
      * as prescription drugs: antibiotics, blood pressure, cholesterol and
@@ -62,8 +108,8 @@ class MedicineSeeder extends Seeder
      *  Lipitor (Rx)     -> RiteMed Atorvastatin; Maria can add it, guests cannot
      *  Augmentin (Rx)   -> RiteMed Co-Amoxiclav; still blocked for Maria
      *
-     * Medicol Advance (4 strips) and Ascof Lagundi (8 strips) have too few
-     * strips left for a full box, so only the strip can be chosen.
+     * Medicol Advance (40 capsules) and Ascof Lagundi (80 tablets) have too
+     * few left for a full box of 100, so only single pieces can be chosen.
      */
     public function run(): void
     {
@@ -72,61 +118,61 @@ class MedicineSeeder extends Seeder
 
         $catalogue = [
             // Pain & Fever
-            [$otc, 'Biogesic', 'Biogesic', 'Paracetamol', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 50.00, 480.00, 150],
-            [$otc, 'RiteMed Paracetamol', 'RiteMed', 'Paracetamol', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 20.00, 190.00, 80],
-            [$otc, 'Panadol', 'Panadol', 'Paracetamol', '500 mg', 'Caplet', 10, 10, 'Pain & Fever', 70.00, 670.00, 45],
-            [$otc, 'Advil', 'Advil', 'Ibuprofen', '200 mg', 'Softgel capsule', 10, 10, 'Pain & Fever', 100.00, 960.00, 0],
-            [$otc, 'Medicol Advance', 'Medicol', 'Ibuprofen', '200 mg', 'Softgel capsule', 10, 10, 'Pain & Fever', 80.00, 770.00, 4],
-            [$otc, 'RiteMed Ibuprofen', 'RiteMed', 'Ibuprofen', '200 mg', 'Tablet', 10, 10, 'Pain & Fever', 35.00, 330.00, 60],
-            [$otc, 'Alaxan FR', 'Alaxan', 'Ibuprofen + Paracetamol', '200 mg / 325 mg', 'Capsule', 10, 10, 'Pain & Fever', 90.00, 860.00, 70],
-            [$otc, 'Dolfenal', 'Dolfenal', 'Mefenamic Acid', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 180.00, 1720.00, 30],
+            [$otc, 'Biogesic', 'Biogesic', 'Paracetamol', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 5.00, 480.00, 1500],
+            [$otc, 'RiteMed Paracetamol', 'RiteMed', 'Paracetamol', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 2.00, 190.00, 800],
+            [$otc, 'Panadol', 'Panadol', 'Paracetamol', '500 mg', 'Caplet', 10, 10, 'Pain & Fever', 7.00, 670.00, 450],
+            [$otc, 'Advil', 'Advil', 'Ibuprofen', '200 mg', 'Softgel capsule', 10, 10, 'Pain & Fever', 10.00, 960.00, 0],
+            [$otc, 'Medicol Advance', 'Medicol', 'Ibuprofen', '200 mg', 'Softgel capsule', 10, 10, 'Pain & Fever', 8.00, 770.00, 40],
+            [$otc, 'RiteMed Ibuprofen', 'RiteMed', 'Ibuprofen', '200 mg', 'Tablet', 10, 10, 'Pain & Fever', 3.50, 330.00, 600],
+            [$otc, 'Alaxan FR', 'Alaxan', 'Ibuprofen + Paracetamol', '200 mg / 325 mg', 'Capsule', 10, 10, 'Pain & Fever', 9.00, 860.00, 700],
+            [$otc, 'Dolfenal', 'Dolfenal', 'Mefenamic Acid', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 18.00, 1720.00, 300],
 
             // Cough & Colds
-            [$otc, 'Neozep Forte', 'Neozep', 'Phenylephrine + Chlorphenamine + Paracetamol', '10 mg / 2 mg / 500 mg', 'Tablet', 10, 10, 'Cough & Colds', 65.00, 620.00, 90],
-            [$otc, 'Bioflu', 'Bioflu', 'Phenylephrine + Chlorphenamine + Paracetamol', '10 mg / 2 mg / 500 mg', 'Tablet', 10, 10, 'Cough & Colds', 80.00, 760.00, 0],
-            [$otc, 'Solmux', 'Solmux', 'Carbocisteine', '500 mg', 'Capsule', 10, 10, 'Cough & Colds', 100.00, 950.00, 40],
-            [$otc, 'RiteMed Carbocisteine', 'RiteMed', 'Carbocisteine', '500 mg', 'Capsule', 10, 10, 'Cough & Colds', 50.00, 470.00, 35],
-            [$otc, 'Ascof Lagundi', 'Ascof', 'Lagundi Leaf', '600 mg', 'Tablet', 10, 10, 'Cough & Colds', 70.00, 660.00, 8],
+            [$otc, 'Neozep Forte', 'Neozep', 'Phenylephrine + Chlorphenamine + Paracetamol', '10 mg / 2 mg / 500 mg', 'Tablet', 10, 10, 'Cough & Colds', 6.50, 620.00, 900],
+            [$otc, 'Bioflu', 'Bioflu', 'Phenylephrine + Chlorphenamine + Paracetamol', '10 mg / 2 mg / 500 mg', 'Tablet', 10, 10, 'Cough & Colds', 8.00, 760.00, 0],
+            [$otc, 'Solmux', 'Solmux', 'Carbocisteine', '500 mg', 'Capsule', 10, 10, 'Cough & Colds', 10.00, 950.00, 400],
+            [$otc, 'RiteMed Carbocisteine', 'RiteMed', 'Carbocisteine', '500 mg', 'Capsule', 10, 10, 'Cough & Colds', 5.00, 470.00, 350],
+            [$otc, 'Ascof Lagundi', 'Ascof', 'Lagundi Leaf', '600 mg', 'Tablet', 10, 10, 'Cough & Colds', 7.00, 660.00, 80],
 
             // Allergy
-            [$otc, 'Claritin', 'Claritin', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 350.00, 3400.00, 0],
-            [$otc, 'Allerta', 'Allerta', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 120.00, 1150.00, 40],
-            [$otc, 'RiteMed Loratadine', 'RiteMed', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 50.00, 470.00, 30],
-            [$otc, 'Virlix', 'Virlix', 'Cetirizine', '10 mg', 'Tablet', 10, 10, 'Allergy', 200.00, 1900.00, 25],
+            [$otc, 'Claritin', 'Claritin', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 35.00, 3400.00, 0],
+            [$otc, 'Allerta', 'Allerta', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 12.00, 1150.00, 400],
+            [$otc, 'RiteMed Loratadine', 'RiteMed', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 5.00, 470.00, 300],
+            [$otc, 'Virlix', 'Virlix', 'Cetirizine', '10 mg', 'Tablet', 10, 10, 'Allergy', 20.00, 1900.00, 250],
 
             // Stomach & Digestion
-            [$otc, 'Kremil-S', 'Kremil-S', 'Aluminum Hydroxide + Magnesium Hydroxide + Simeticone', '178 mg / 233 mg / 30 mg', 'Chewable tablet', 10, 10, 'Stomach & Digestion', 90.00, 860.00, 50],
-            [$otc, 'Diatabs', 'Diatabs', 'Loperamide', '2 mg', 'Capsule', 10, 10, 'Stomach & Digestion', 80.00, 760.00, 45],
-            [$otc, 'Imodium', 'Imodium', 'Loperamide', '2 mg', 'Capsule', 10, 10, 'Stomach & Digestion', 140.00, 1350.00, 0],
-            [$otc, 'Buscopan', 'Buscopan', 'Hyoscine Butylbromide', '10 mg', 'Tablet', 10, 10, 'Stomach & Digestion', 180.00, 1750.00, 0],
+            [$otc, 'Kremil-S', 'Kremil-S', 'Aluminum Hydroxide + Magnesium Hydroxide + Simeticone', '178 mg / 233 mg / 30 mg', 'Chewable tablet', 10, 10, 'Stomach & Digestion', 9.00, 860.00, 500],
+            [$otc, 'Diatabs', 'Diatabs', 'Loperamide', '2 mg', 'Capsule', 10, 10, 'Stomach & Digestion', 8.00, 760.00, 450],
+            [$otc, 'Imodium', 'Imodium', 'Loperamide', '2 mg', 'Capsule', 10, 10, 'Stomach & Digestion', 14.00, 1350.00, 0],
+            [$otc, 'Buscopan', 'Buscopan', 'Hyoscine Butylbromide', '10 mg', 'Tablet', 10, 10, 'Stomach & Digestion', 18.00, 1750.00, 0],
 
             // Vitamins
-            [$otc, 'Poten-Cee', 'Poten-Cee', 'Ascorbic Acid', '500 mg', 'Tablet', 10, 10, 'Vitamins', 70.00, 670.00, 60],
-            [$otc, 'RiteMed Ascorbic Acid', 'RiteMed', 'Ascorbic Acid', '500 mg', 'Tablet', 10, 10, 'Vitamins', 25.00, 240.00, 50],
-            [$otc, 'Fern-C', 'Fern-C', 'Sodium Ascorbate', '568.18 mg', 'Capsule', 10, 10, 'Vitamins', 80.00, 760.00, 40],
+            [$otc, 'Poten-Cee', 'Poten-Cee', 'Ascorbic Acid', '500 mg', 'Tablet', 10, 10, 'Vitamins', 7.00, 670.00, 600],
+            [$otc, 'RiteMed Ascorbic Acid', 'RiteMed', 'Ascorbic Acid', '500 mg', 'Tablet', 10, 10, 'Vitamins', 2.50, 240.00, 500],
+            [$otc, 'Fern-C', 'Fern-C', 'Sodium Ascorbate', '568.18 mg', 'Capsule', 10, 10, 'Vitamins', 8.00, 760.00, 400],
 
             // Prescription: Antibiotics
-            [$rx, 'Amoxil', 'Amoxil', 'Amoxicillin', '500 mg', 'Capsule', 10, 10, 'Antibiotics', 220.00, 2100.00, 30],
-            [$rx, 'RiteMed Amoxicillin', 'RiteMed', 'Amoxicillin', '500 mg', 'Capsule', 10, 10, 'Antibiotics', 60.00, 570.00, 50],
-            [$rx, 'Augmentin', 'Augmentin', 'Amoxicillin + Clavulanic Acid', '500 mg / 125 mg', 'Tablet', 7, 2, 'Antibiotics', 595.00, 1170.00, 0],
-            [$rx, 'RiteMed Co-Amoxiclav', 'RiteMed', 'Amoxicillin + Clavulanic Acid', '500 mg / 125 mg', 'Tablet', 7, 2, 'Antibiotics', 245.00, 480.00, 20],
+            [$rx, 'Amoxil', 'Amoxil', 'Amoxicillin', '500 mg', 'Capsule', 10, 10, 'Antibiotics', 22.00, 2100.00, 300],
+            [$rx, 'RiteMed Amoxicillin', 'RiteMed', 'Amoxicillin', '500 mg', 'Capsule', 10, 10, 'Antibiotics', 6.00, 570.00, 500],
+            [$rx, 'Augmentin', 'Augmentin', 'Amoxicillin + Clavulanic Acid', '500 mg / 125 mg', 'Tablet', 7, 2, 'Antibiotics', 85.00, 1170.00, 0],
+            [$rx, 'RiteMed Co-Amoxiclav', 'RiteMed', 'Amoxicillin + Clavulanic Acid', '500 mg / 125 mg', 'Tablet', 7, 2, 'Antibiotics', 35.00, 480.00, 140],
 
             // Prescription: Heart & Blood Pressure
-            [$rx, 'Norvasc', 'Norvasc', 'Amlodipine', '5 mg', 'Tablet', 10, 3, 'Heart & Blood Pressure', 450.00, 1330.00, 24],
-            [$rx, 'RiteMed Amlodipine', 'RiteMed', 'Amlodipine', '5 mg', 'Tablet', 10, 10, 'Heart & Blood Pressure', 80.00, 760.00, 50],
-            [$rx, 'Cozaar', 'Cozaar', 'Losartan', '50 mg', 'Tablet', 10, 3, 'Heart & Blood Pressure', 500.00, 1480.00, 21],
-            [$rx, 'RiteMed Losartan', 'RiteMed', 'Losartan', '50 mg', 'Tablet', 10, 10, 'Heart & Blood Pressure', 100.00, 950.00, 40],
+            [$rx, 'Norvasc', 'Norvasc', 'Amlodipine', '5 mg', 'Tablet', 10, 3, 'Heart & Blood Pressure', 45.00, 1330.00, 240],
+            [$rx, 'RiteMed Amlodipine', 'RiteMed', 'Amlodipine', '5 mg', 'Tablet', 10, 10, 'Heart & Blood Pressure', 8.00, 760.00, 500],
+            [$rx, 'Cozaar', 'Cozaar', 'Losartan', '50 mg', 'Tablet', 10, 3, 'Heart & Blood Pressure', 50.00, 1480.00, 210],
+            [$rx, 'RiteMed Losartan', 'RiteMed', 'Losartan', '50 mg', 'Tablet', 10, 10, 'Heart & Blood Pressure', 10.00, 950.00, 400],
 
             // Prescription: Cholesterol
-            [$rx, 'Lipitor', 'Lipitor', 'Atorvastatin', '20 mg', 'Tablet', 10, 3, 'Cholesterol', 700.00, 2070.00, 0],
-            [$rx, 'RiteMed Atorvastatin', 'RiteMed', 'Atorvastatin', '20 mg', 'Tablet', 10, 10, 'Cholesterol', 150.00, 1430.00, 40],
+            [$rx, 'Lipitor', 'Lipitor', 'Atorvastatin', '20 mg', 'Tablet', 10, 3, 'Cholesterol', 70.00, 2070.00, 0],
+            [$rx, 'RiteMed Atorvastatin', 'RiteMed', 'Atorvastatin', '20 mg', 'Tablet', 10, 10, 'Cholesterol', 15.00, 1430.00, 400],
 
             // Prescription: Diabetes
-            [$rx, 'Glucophage', 'Glucophage', 'Metformin', '500 mg', 'Tablet', 10, 10, 'Diabetes', 80.00, 760.00, 60],
-            [$rx, 'RiteMed Metformin', 'RiteMed', 'Metformin', '500 mg', 'Tablet', 10, 10, 'Diabetes', 30.00, 285.00, 60],
+            [$rx, 'Glucophage', 'Glucophage', 'Metformin', '500 mg', 'Tablet', 10, 10, 'Diabetes', 8.00, 760.00, 600],
+            [$rx, 'RiteMed Metformin', 'RiteMed', 'Metformin', '500 mg', 'Tablet', 10, 10, 'Diabetes', 3.00, 285.00, 600],
         ];
 
-        foreach ($catalogue as [$category, $name, $brand, $ingredient, $strength, $form, $piecesPerStrip, $stripsPerBox, $class, $stripPrice, $boxPrice, $stock]) {
+        foreach ($catalogue as [$category, $name, $brand, $ingredient, $strength, $form, $piecesPerStrip, $stripsPerBox, $class, $piecePrice, $boxPrice, $stock]) {
             Medicine::create([
                 'category_id' => $category,
                 'name' => $name,
@@ -138,8 +184,9 @@ class MedicineSeeder extends Seeder
                 'strips_per_box' => $stripsPerBox,
                 'therapeutic_class' => $class,
                 'description' => self::USES[$ingredient] ?? null,
-                'strip_price' => $stripPrice,
+                'piece_price' => $piecePrice,
                 'box_price' => $boxPrice,
+                'image_path' => self::IMAGE_PATHS[$name] ?? null,
                 'stock' => $stock,
             ]);
         }

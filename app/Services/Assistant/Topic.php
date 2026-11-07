@@ -18,7 +18,7 @@ enum Topic: string
     /** "Are they the same dosage?", "Is it the same mg?" */
     case Dose = 'dose';
 
-    /** "How many are in a strip and a box?" */
+    /** "How many are in a box?", "How many tablets?" */
     case Packaging = 'packaging';
 
     /** "Is it the same as Claritin?", "What's the difference?" */

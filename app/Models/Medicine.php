@@ -13,13 +13,16 @@ use Illuminate\Support\Str;
 
 #[Fillable([
     'category_id', 'name', 'brand', 'active_ingredient', 'strength', 'dosage_form',
-    'pieces_per_strip', 'strips_per_box', 'therapeutic_class', 'description', 'strip_price',
+    'pieces_per_strip', 'strips_per_box', 'therapeutic_class', 'description', 'piece_price',
     'box_price', 'image_path', 'stock',
 ])]
 class Medicine extends Model
 {
-    /** Strips on the shelf at or below which staff see a "running low" alert. */
-    public const LOW_STOCK = 5;
+    /**
+     * Pieces on the shelf at or below which staff see a "running low" alert.
+     * Stock is counted in single pieces (tablets, capsules).
+     */
+    public const LOW_STOCK = 50;
 
     /**
      * Get the attributes that should be cast.
@@ -29,7 +32,7 @@ class Medicine extends Model
     protected function casts(): array
     {
         return [
-            'strip_price' => 'decimal:2',
+            'piece_price' => 'decimal:2',
             'box_price' => 'decimal:2',
             'pieces_per_strip' => 'integer',
             'strips_per_box' => 'integer',
@@ -69,19 +72,27 @@ class Medicine extends Model
     }
 
     /**
-     * How many strips one unit of this packaging takes off the shelf.
+     * How many pieces one box holds, e.g. 100 tablets.
      */
-    public function stripsPer(Packaging $packaging): int
+    public function piecesPerBox(): int
     {
-        return $packaging === Packaging::Box ? $this->strips_per_box : 1;
+        return $this->pieces_per_strip * $this->strips_per_box;
     }
 
     /**
-     * Price of one strip or one box, e.g. "480.00".
+     * How many pieces one unit of this packaging takes off the shelf.
+     */
+    public function piecesPer(Packaging $packaging): int
+    {
+        return $packaging === Packaging::Box ? $this->piecesPerBox() : 1;
+    }
+
+    /**
+     * Price of one piece or one box, e.g. "5.00" or "480.00".
      */
     public function priceOf(Packaging $packaging): string
     {
-        return $packaging === Packaging::Box ? $this->box_price : $this->strip_price;
+        return $packaging === Packaging::Box ? $this->box_price : $this->piece_price;
     }
 
     /**
@@ -89,33 +100,51 @@ class Medicine extends Model
      */
     public function canSell(Packaging $packaging): bool
     {
-        return $this->stock >= $this->stripsPer($packaging);
+        return $this->stock >= $this->piecesPer($packaging);
     }
 
     /**
-     * What a box saves over buying its strips one by one.
+     * What a box saves over buying its pieces one by one.
      */
     public function boxSavings(): float
     {
-        return max(0, round($this->strip_price * $this->strips_per_box - $this->box_price, 2));
+        return max(0, round($this->piece_price * $this->piecesPerBox() - $this->box_price, 2));
     }
 
     /**
-     * "tablets", "capsules", "caplets": what is in each blister pocket.
+     * "tablets", "capsule", "caplets": what one piece of this medicine is.
      */
-    public function pieceName(): string
+    public function pieceName(int $count = 2): string
     {
-        return Str::plural(Str::lower(Str::afterLast($this->dosage_form, ' ')));
+        return Str::plural(Str::lower(Str::afterLast($this->dosage_form, ' ')), $count);
     }
 
     /**
-     * "Strip of 10 tablets", "Box of 3 strips (30 tablets)".
+     * "11 tablets", "1 capsule", "3 boxes".
+     */
+    public function countOf(Packaging $packaging, int $quantity): string
+    {
+        return $packaging === Packaging::Box
+            ? $packaging->count($quantity)
+            : "{$quantity} {$this->pieceName($quantity)}";
+    }
+
+    /**
+     * "Tablet" or "Box": the packaging, named for this medicine.
+     */
+    public function packagingName(Packaging $packaging): string
+    {
+        return $packaging === Packaging::Box ? 'Box' : Str::ucfirst($this->pieceName(1));
+    }
+
+    /**
+     * "Single tablet", "Box of 100 tablets".
      */
     public function packDescription(Packaging $packaging): string
     {
         return $packaging === Packaging::Box
-            ? "Box of {$this->strips_per_box} strips (".($this->strips_per_box * $this->pieces_per_strip)." {$this->pieceName()})"
-            : "Strip of {$this->pieces_per_strip} {$this->pieceName()}";
+            ? "Box of {$this->piecesPerBox()} {$this->pieceName()}"
+            : 'Single '.$this->pieceName(1);
     }
 
     /**
@@ -226,6 +255,6 @@ class Medicine extends Model
             ->inStock()
             ->orderByRaw('CASE WHEN strength = ? THEN 0 ELSE 1 END', [$medicine->strength])
             ->orderByRaw('CASE WHEN dosage_form = ? THEN 0 ELSE 1 END', [$medicine->dosage_form])
-            ->orderBy('strip_price');
+            ->orderBy('piece_price');
     }
 }

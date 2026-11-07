@@ -1,6 +1,6 @@
 # Pharmacy Kiosk
 
-A self-service pharmacy kiosk demo built on Laravel 13, Blade and Alpine.js, set up for a Philippine drugstore: local brands such as Biogesic, Neozep Forte and RiteMed generics, prices in pesos (₱), and a red-and-white design. Customers search medicines, see in plain words what each one is for, count how many **strips and boxes** they want with +/- buttons, fill a basket and leave with a barcoded order slip to pay at the counter. Prescription medicines are gated on the member's purchase history, and an AI stock assistant suggests same-ingredient brands when something is out of stock and answers questions about them, such as "are they the same dosage?".
+A self-service pharmacy kiosk demo built on Laravel 13, Blade and Alpine.js, set up for a Philippine drugstore: local brands such as Biogesic, Neozep Forte and RiteMed generics, prices in pesos (₱), and a red-and-white design. Customers search medicines, see in plain words what each one is for, count any number of **pieces and boxes** with +/- buttons (limited only by the shared shelf stock), fill a basket and leave with a barcoded order slip to pay at the counter. Prescription medicines are gated on the member's purchase history, and an AI stock assistant suggests same-ingredient brands when something is out of stock and answers questions about them, such as "are they the same dosage?".
 
 ## Run it
 
@@ -20,10 +20,11 @@ Open http://localhost:8000. Re-run `php artisan migrate:fresh --seed` to reset s
 
 | Try this | What happens |
 | --- | --- |
-| Add **Biogesic** as a guest | Over-the-counter. A popup shows what it's for and two +/- counters: **Strips** (₱50.00, 10 tablets) and **Boxes** (₱480.00, 10 strips, "Save ₱20.00 a box"). Tap + three times on strips and once on boxes, and "Add to basket" adds 3 strips and 1 box in one go, with the running total shown |
-| Add **Ascof Lagundi** or **Medicol Advance** | Only a few strips are left, so the box counter can't go above 0: "not enough for a box" |
-| Count 4 boxes and 1 strip of **Solmux** | Refused as a whole, nothing added: the 40 strips on the shelf cover 4 boxes but not the extra strip |
-| Add **Amoxil** as a guest | Blocked before the strip/box question: "Prescription required. Please proceed to the pharmacy counter for assistance." |
+| Add **Biogesic** as a guest | Over-the-counter. The card has two +/- counters, both starting at 0: **Piece** (₱5.00) and **Box of 100 tablets** (₱480.00, "Save ₱20.00 on 100 single tablets"). Tap + three times on pieces and once on boxes; the button becomes "Add to basket · ₱495.00" and adds 3 pieces and 1 box in one go. The basket shows both lines, and **Finish** → **Place order** prints the counts on the slip |
+| Tap **What is it for?** (or the picture) on any card | The plain-language description opens under the name. Scrolling the list closes it again, and opening another card's closes the first, so the list stays short |
+| Add **Ascof Lagundi** or **Medicol Advance** | Only a few pieces are left, so the box counter can't go above 0: "Not enough left for a box" |
+| Count 4 boxes and 1 piece of **Solmux** | Refused as a whole, nothing added: the 400 pieces on the shelf cover 4 boxes but not the extra piece |
+| Add **Amoxil** as a guest | Blocked before the piece/box question: "Prescription required. Please proceed to the pharmacy counter for assistance." |
 | **Member sign in** → Maria Santos (100245) | Mock card tap. A pending prescription item is retried automatically |
 | Maria adds **Glucophage** | Allowed, she has bought it before |
 | Maria adds **Amoxil** or **RiteMed Co-Amoxiclav** | Still blocked, she never has |
@@ -35,7 +36,7 @@ Open http://localhost:8000. Re-run `php artisan migrate:fresh --seed` to reset s
 | Type "is neozip the same as bioflu?" | Small typos are forgiven: Neozep Forte is the same medicine as Bioflu, only the brand and price differ |
 | Ask about **Lipitor** | Suggests RiteMed Atorvastatin 20 mg, which Maria can add because she has filled Lipitor 20 mg |
 | Ask "what can I take for a headache?" or "how many should I take?" | Declined: what to take and how much is for the pharmacist |
-| **Finish** → **Place order** | Order slip with queue number, Code 128 barcode, and strip or box on every line. The session is wiped and the screen returns to "Touch to begin" after 30 seconds |
+| **Finish** → **Place order** | Order slip with queue number, Code 128 barcode, and the piece or box count on every line. The session is wiped and the screen returns to "Touch to begin" after 30 seconds |
 | Leave the shopping screen alone for 90 seconds | "Are you still there?" then an automatic reset |
 
 Daniel Okafor (100318) has Cozaar (losartan) on file instead, so his and Maria's prescriptions don't overlap.
@@ -46,9 +47,9 @@ Daniel Okafor (100318) has Cozaar (losartan) on file instead, so his and Maria's
 
 **Prescription only (Rx):** antibiotics (Amoxil, Augmentin and their RiteMed generics), blood pressure (Norvasc, Cozaar), cholesterol (Lipitor) and diabetes (Glucophage) medicines, with a RiteMed generic for each. The Philippine FDA registers these drugs as "Prescription Drug (Rx)". Everything else, including Biogesic, Neozep Forte, Bioflu, Alaxan FR, Dolfenal, Solmux, Diatabs and Kremil-S, is over the counter. Have a pharmacist confirm the list against the FDA verification portal (verification.fda.gov.ph) before going live.
 
-**Strip or box:** every medicine comes in blister strips. `pieces_per_strip`, `strips_per_box`, `strip_price` and `box_price` are set per medicine, and **stock is counted in strips**. A box takes `strips_per_box` strips off the shelf, so it can only be chosen while that many are left. A customer can have the same medicine by the strip and by the box at once, and both draw on the same stock. Each order line records the packaging and the strips it took, and cancelling an order puts exactly those strips back.
+**Piece or box:** every medicine comes in blister strips, but customers can buy any number of individual pieces or whole boxes. `pieces_per_strip`, `strips_per_box`, `piece_price` and `box_price` are set per medicine, and **stock is counted in pieces**. A box takes its full piece count off the shelf, so it can only be chosen while that many are left. A customer can have the same medicine by the piece and by the box at once, and both draw on the same stock. Each order line records the packaging and the pieces it took, and cancelling an order puts exactly those pieces back.
 
-**What it's for:** each medicine has a `description`, one or two plain sentences such as "For fever and mild to moderate pain, such as headache, toothache, body aches and menstrual cramps." It is shown on the card, in the strip/box popup and by the assistant. The seeder writes it once per active ingredient (`MedicineSeeder::USES`), so every brand of the same medicine says the same thing. They are label-style uses only, never dosing advice.
+**What it's for:** each medicine has a `description`, one or two plain sentences such as "For fever and mild to moderate pain, such as headache, toothache, body aches and menstrual cramps." It is folded away on each card behind "What is it for?", and the assistant uses it too. The seeder writes it once per active ingredient (`MedicineSeeder::USES`), so every brand of the same medicine says the same thing. They are label-style uses only, never dosing advice.
 
 **Pictures:** each card shows a drawing of the pack (a box in the brand's colour and a blister strip with the right number and shape of pills, marked "Rx" for prescription items). To use a real product photo instead, put the image under `public/` (for example `public/images/medicines/biogesic.webp`) and set that medicine's `image_path` to `images/medicines/biogesic.webp`. Use photos you have the rights to, such as your own shots or supplier-provided images.
 
@@ -115,9 +116,9 @@ tap "Add to basket", then "By the box"
 | POST | `/start` | `kiosk.start` | `KioskController@start` | Fresh session, go to the shop |
 | GET | `/kiosk?q=&type=&class=` | `kiosk` | `KioskController@index` | Search, browse, basket, assistant |
 | POST | `/reset` | `kiosk.reset` | `KioskController@reset` | Start over / idle timeout |
-| POST | `/kiosk/basket/{medicine}` | `basket.store` | `BasketController@store` | Add strips and boxes, `quantities[strip]` and `quantities[box]` (prescription check first) |
-| PUT | `/kiosk/basket/{medicine}` | `basket.update` | `BasketController@update` | Change how many strips or boxes |
-| DELETE | `/kiosk/basket/{medicine}` | `basket.destroy` | `BasketController@destroy` | Remove the strips or the boxes |
+| POST | `/kiosk/basket/{medicine}` | `basket.store` | `BasketController@store` | Add pieces and boxes, `quantities[piece]` and `quantities[box]` (prescription check first) |
+| PUT | `/kiosk/basket/{medicine}` | `basket.update` | `BasketController@update` | Change how many pieces or boxes |
+| DELETE | `/kiosk/basket/{medicine}` | `basket.destroy` | `BasketController@destroy` | Remove the pieces or the boxes |
 | POST | `/kiosk/member` | `member.store` | `MemberController@store` | Mock card sign in |
 | DELETE | `/kiosk/member` | `member.destroy` | `MemberController@destroy` | Sign out |
 | POST | `/kiosk/assistant` | `assistant.store` | `AssistantController@store` | Ask the stock assistant |
@@ -126,7 +127,7 @@ tap "Add to basket", then "By the box"
 
 The staff routes live under `/staff-portal` (see above). Run `php artisan route:list` to see them all.
 
-The drawers and popups on `/kiosk` are opened from flash data: `panel` (assistant, basket, member) and `prescription_required`. The strip-or-box popup opens straight from the card through Alpine's `pack` state. Its +/- counters (`packCounter` in `app.js`) only fill in an ordinary form, which the controller checks again. Alpine only shows and hides them. `resources/js/app.js` holds the touch-screen helpers: the idle timer, the on-screen keyboard, and double-tap protection.
+The drawers and popups on `/kiosk` are opened from flash data: `panel` (assistant, basket, member) and `prescription_required`. Alpine only shows and hides them. The strip and box +/- counters on each card (`packCounter` in `app.js`) only fill in an ordinary form, which the controller checks again, and `medicineDetails` opens and closes a card's description. `resources/js/app.js` also holds the touch-screen helpers: the idle timer, the on-screen keyboard, and double-tap protection.
 
 ## Where things are
 
@@ -147,4 +148,4 @@ The drawers and popups on `/kiosk` are opened from flash data: `panel` (assistan
 php artisan test
 ```
 
-84 feature tests cover the prescription rules, strip and box pricing and counting both in one tap, plain-language descriptions, stock limits (counted in strips), checkout and session reset, signed receipts, the staff login, paying and cancelling orders, and the assistant's guardrails and follow-up answers. The Claude path is exercised through the real SDK with a mocked HTTP transport.
+84 feature tests cover the prescription rules, piece and box pricing and counting both in one tap, plain-language descriptions, stock limits (counted in pieces), checkout and session reset, signed receipts, the staff login, paying and cancelling orders, and the assistant's guardrails and follow-up answers. The Claude path is exercised through the real SDK with a mocked HTTP transport.

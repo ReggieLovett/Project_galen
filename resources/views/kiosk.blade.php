@@ -10,8 +10,8 @@
 @endphp
 
 <x-layouts.kiosk title="Shop" class="overflow-hidden">
-{{-- panel: which drawer is open. pack: which medicine's "strip or box?" chooser is open. --}}
-<div x-data="{ panel: @js($openPanel), pack: null }" x-on:keydown.escape.window="pack ? pack = null : panel = null" class="flex h-dvh flex-col">
+{{-- panel: which drawer is open --}}
+<div x-data="{ panel: @js($openPanel) }" x-on:keydown.escape.window="panel = null" class="flex h-dvh flex-col">
 
     {{-- ================= Top bar ================= --}}
     <header class="flex flex-wrap items-center gap-3 border-b-4 border-brand-deep bg-brand px-4 py-3 text-white sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4">
@@ -93,20 +93,29 @@
 
     <div class="flex min-h-0 flex-1">
         {{-- ================= Catalogue ================= --}}
-        <main class="flex min-w-0 flex-1 flex-col">
+        <main data-kiosk-region="catalogue" class="flex min-w-0 flex-1 flex-col">
             {{-- CATEGORIES — links like /kiosk?class=Allergy, one row that scrolls sideways --}}
-            <nav class="border-b-2 border-line bg-surface/60" aria-label="Categories">
-                <div class="scroll-row flex gap-2 px-4 py-3 sm:px-6">
-                    <a href="{{ $filterUrl(['class' => null]) }}" @if (blank($filters['class'] ?? null)) aria-current="true" @endif class="chip shrink-0">All categories</a>
-                    @foreach ($classes as $class)
-                        <a href="{{ $filterUrl(['class' => $class]) }}" @if (($filters['class'] ?? null) === $class) aria-current="true" @endif class="chip shrink-0">{{ $class }}</a>
-                    @endforeach
-                    <span class="w-8 shrink-0" aria-hidden="true"></span>
+            <nav class="border-b-2 border-line bg-surface/60" aria-label="Categories" x-data="horizontalScroller()">
+                <div class="relative">
+                    <button type="button" x-on:click="scrollBy(-1)" x-bind:disabled="atStart" class="btn-icon absolute top-1/2 left-2 z-10 size-11 -translate-y-1/2 border-line/80 bg-surface/95 shadow-sm transition-all duration-200 hover:-translate-x-0.5 disabled:pointer-events-none disabled:opacity-0" aria-label="Show previous categories">
+                        <x-icon name="arrow-left" :size="20" />
+                    </button>
+                    <div x-ref="scroller" class="scroll-row flex gap-2 px-4 py-3 sm:px-6">
+                        <a href="{{ $filterUrl(['class' => null]) }}" @if (blank($filters['class'] ?? null)) aria-current="true" @endif class="chip shrink-0">All categories</a>
+                        @foreach ($classes as $class)
+                            <a href="{{ $filterUrl(['class' => $class]) }}" @if (($filters['class'] ?? null) === $class) aria-current="true" @endif class="chip shrink-0">{{ $class }}</a>
+                        @endforeach
+                        <span class="w-8 shrink-0" aria-hidden="true"></span>
+                    </div>
+                    <button type="button" x-on:click="scrollBy(1)" x-bind:disabled="atEnd" class="btn-icon absolute top-1/2 right-2 z-10 size-11 -translate-y-1/2 border-line/80 bg-surface/95 shadow-sm transition-all duration-200 hover:translate-x-0.5 disabled:pointer-events-none disabled:opacity-0" aria-label="Show next categories">
+                        <x-icon name="arrow-right" :size="20" />
+                    </button>
                 </div>
             </nav>
 
-            {{-- relative: keeps screen-reader-only text inside this scroller, so it can't make the whole page scroll --}}
-            <div class="relative min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+            {{-- relative: keeps screen-reader-only text inside this scroller, so it can't make the whole page scroll.
+                 Scrolling tells the cards, so an open "What is it for?" closes again. --}}
+            <div data-catalogue x-on:scroll.passive="$dispatch('catalogue-scroll', $el.scrollTop)" class="relative min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
                 {{-- Help is one tap away --}}
                 <button type="button" x-on:click="panel = 'assistant'" class="focus-ring mb-5 flex w-full items-center gap-4 rounded-2xl border-2 border-assist/15 bg-assist-soft p-4 text-left transition-colors duration-150 hover:border-assist/40">
                     <span class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-assist text-white"><x-icon name="sparkles" /></span>
@@ -155,7 +164,7 @@
 
         {{-- ================= Basket (side panel; drawer below lg) ================= --}}
         <div x-show="panel === 'basket'" x-cloak x-on:click="panel = null" class="fixed inset-0 z-30 bg-ink/50 lg:hidden"></div>
-        <aside
+        <aside data-kiosk-region="basket"
             class="fixed inset-y-0 right-0 z-40 flex w-full max-w-md translate-x-full flex-col border-l-2 border-line bg-surface transition-transform duration-300 ease-out-quart lg:static lg:w-[25rem] lg:max-w-none lg:translate-x-0 xl:w-[27rem]"
             x-bind:class="panel === 'basket' && 'translate-x-0!'"
             aria-labelledby="basket-title"
@@ -163,6 +172,15 @@
             <div class="flex items-center justify-between gap-3 border-b-2 border-line px-5 py-4">
                 <h2 id="basket-title" class="flex items-center gap-3 text-2xl font-bold"><x-icon name="basket" :size="26" />Your basket</h2>
                 <span class="badge bg-sunken text-base text-ink">{{ $basketCount }} {{ Str::plural('item', $basketCount) }}</span>
+                @if ($basketCount)
+                    <form method="POST" action="{{ route('basket.clear') }}" x-data x-on:submit="confirm('Remove every medicine from your basket?') || $event.preventDefault()">
+                        @csrf
+                        <input type="hidden" name="panel" value="basket">
+                        <button type="submit" class="btn-icon size-11 border-danger/30 text-danger transition-all duration-200 hover:-translate-y-0.5 hover:bg-danger-soft" aria-label="Clear entire basket">
+                            <x-icon name="trash" :size="20" />
+                        </button>
+                    </form>
+                @endif
                 <button type="button" x-on:click="panel = null" class="btn-icon ml-auto lg:hidden" aria-label="Close basket"><x-icon name="x" /></button>
             </div>
 
@@ -177,7 +195,7 @@
                                     <p class="font-display text-lg leading-snug font-bold">{{ $item->name }}</p>
                                     <p class="text-ink-muted">{{ $item->drugLabel() }}</p>
                                     <p class="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
-                                        <span class="badge bg-brand-soft px-2 py-0.5 text-brand-hover">{{ $packaging->label() }}</span>
+                                        <span class="badge bg-brand-soft px-2 py-0.5 text-brand-hover">{{ $item->packagingName($packaging) }}</span>
                                         <span class="text-ink-muted">{{ $item->packDescription($packaging) }} · <x-money :amount="$line['unit_price']" /> each</span>
                                     </p>
                                 </div>
@@ -197,7 +215,7 @@
                                     <input type="hidden" name="packaging" value="{{ $packaging->value }}">
                                     <input type="hidden" name="quantity" value="{{ $line['quantity'] - 1 }}">
                                     <input type="hidden" name="panel" value="basket">
-                                    <button type="submit" class="btn-icon" @disabled($line['quantity'] <= 1) aria-label="One {{ Str::lower($packaging->label()) }} fewer of {{ $item->name }}"><x-icon name="minus" /></button>
+                                    <button type="submit" class="btn-icon" @disabled($line['quantity'] <= 1) aria-label="One {{ Str::lower($item->packagingName($packaging)) }} fewer of {{ $item->name }}"><x-icon name="minus" /></button>
                                 </form>
                                 <span class="w-10 text-center font-display text-xl font-bold tabular-nums">{{ $line['quantity'] }}</span>
                                 <form method="POST" action="{{ route('basket.update', $item) }}">
@@ -206,7 +224,7 @@
                                     <input type="hidden" name="packaging" value="{{ $packaging->value }}">
                                     <input type="hidden" name="quantity" value="{{ $line['quantity'] + 1 }}">
                                     <input type="hidden" name="panel" value="basket">
-                                    <button type="submit" class="btn-icon" @disabled($line['quantity'] >= $line['max_quantity']) aria-label="One more {{ Str::lower($packaging->label()) }} of {{ $item->name }}"><x-icon name="plus" /></button>
+                                    <button type="submit" class="btn-icon" @disabled($line['quantity'] >= $line['max_quantity']) aria-label="One more {{ Str::lower($item->packagingName($packaging)) }} of {{ $item->name }}"><x-icon name="plus" /></button>
                                 </form>
 
                                 {{-- DELETE --}}
@@ -245,7 +263,7 @@
     </div>
 
     {{-- Basket bar below lg --}}
-    <div class="flex items-center gap-4 border-t-2 border-line bg-surface px-4 py-3 lg:hidden">
+    <div data-kiosk-region="basket-bar" class="flex items-center gap-4 border-t-2 border-line bg-surface px-4 py-3 lg:hidden">
         <div class="min-w-0 flex-1">
             <p class="font-display text-lg font-bold">{{ $basketCount }} {{ Str::plural('item', $basketCount) }} · <x-money :amount="$basketTotal" /></p>
             <p class="text-sm text-ink-muted">Pay at the counter</p>
@@ -325,7 +343,7 @@
                 @foreach ($basket as $line)
                     <li class="flex justify-between gap-4 px-4 py-3 text-lg">
                         <span>
-                            <span class="font-semibold tabular-nums">{{ $line['quantity'] }} ×</span> {{ $line['medicine']->name }}
+                        <span class="font-semibold">{{ $line['medicine']->countOf($line['packaging'], $line['quantity']) }}</span> {{ $line['medicine']->name }}
                             <span class="block text-base text-ink-muted">{{ $line['medicine']->packDescription($line['packaging']) }}</span>
                         </span>
                         <span class="font-semibold tabular-nums"><x-money :amount="$line['line_total']" /></span>

@@ -33,7 +33,7 @@ class DemoCustomerSeeder extends Seeder
 
         $this->pastOrder($maria, 'C260805-0014', now()->subMonths(3), [
             'Glucophage' => [Packaging::Box, 1],
-            'Biogesic' => [Packaging::Strip, 2],
+            'Biogesic' => [Packaging::Piece, 20],
         ]);
         $this->pastOrder($maria, 'C260906-0031', now()->subMonths(2), [
             'Glucophage' => [Packaging::Box, 1],
@@ -42,7 +42,7 @@ class DemoCustomerSeeder extends Seeder
         $this->pastOrder($maria, 'C261007-0022', now()->subMonth(), [
             'Glucophage' => [Packaging::Box, 1],
             'Lipitor' => [Packaging::Box, 1],
-            'Claritin' => [Packaging::Strip, 1],
+            'Claritin' => [Packaging::Piece, 10],
         ]);
 
         $daniel = User::factory()->create([
@@ -53,7 +53,7 @@ class DemoCustomerSeeder extends Seeder
 
         $this->pastOrder($daniel, 'C260921-0009', now()->subWeeks(6), [
             'Cozaar' => [Packaging::Box, 1],
-            'Virlix' => [Packaging::Strip, 2],
+            'Virlix' => [Packaging::Piece, 20],
         ]);
     }
 
@@ -76,7 +76,7 @@ class DemoCustomerSeeder extends Seeder
                 'packaging' => $packaging,
                 'unit_price' => $medicine->priceOf($packaging),
                 'quantity' => $quantity,
-                'strip_count' => $quantity * $medicine->stripsPer($packaging),
+                'piece_count' => $quantity * $medicine->piecesPer($packaging),
                 'line_total' => $medicine->priceOf($packaging) * $quantity,
             ];
         })->values();

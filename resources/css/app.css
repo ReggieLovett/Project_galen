@@ -126,6 +126,18 @@
         @apply focus-ring inline-flex min-h-14 items-center justify-center gap-2.5 rounded-xl px-6 font-display text-lg font-semibold transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
     }
 
+    .btn:hover:not(:disabled),
+    .btn-icon:hover:not(:disabled),
+    .chip:hover:not(:disabled) {
+        transform: translateY(-2px);
+    }
+
+    .btn:active:not(:disabled),
+    .btn-icon:active:not(:disabled),
+    .chip:active:not(:disabled) {
+        transform: translateY(0) scale(0.97);
+    }
+
     /* Variants: use with .btn, e.g. class="btn btn-primary" */
     .btn-primary {
         @apply bg-brand text-white hover:bg-brand-hover;

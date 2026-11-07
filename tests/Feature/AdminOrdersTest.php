@@ -26,7 +26,7 @@ function actingAsStaff(): TestCase
 }
 
 /**
- * A kiosk order as checkout leaves it: awaiting payment, strips reserved.
+ * A kiosk order as checkout leaves it: awaiting payment, pieces reserved.
  *
  * @param  array<string, array{Packaging, int}>  $lines  medicine name => [packaging, quantity]
  */
@@ -43,7 +43,7 @@ function kioskOrder(array $lines, ?User $customer = null): Order
 
     foreach ($lines as $name => [$packaging, $quantity]) {
         $medicine = medicine($name);
-        $strips = $quantity * $medicine->stripsPer($packaging);
+        $pieces = $quantity * $medicine->piecesPer($packaging);
 
         $order->items()->create([
             'medicine_id' => $medicine->id,
@@ -53,24 +53,24 @@ function kioskOrder(array $lines, ?User $customer = null): Order
             'packaging' => $packaging,
             'unit_price' => $medicine->priceOf($packaging),
             'quantity' => $quantity,
-            'strip_count' => $strips,
+            'piece_count' => $pieces,
             'line_total' => $medicine->priceOf($packaging) * $quantity,
         ]);
 
-        $medicine->decrement('stock', $strips);
+        $medicine->decrement('stock', $pieces);
     }
 
     return $order;
 }
 
 test('the dashboard lists what to fetch for each order', function () {
-    $order = kioskOrder(['Amoxil' => [Packaging::Box, 1], 'Biogesic' => [Packaging::Strip, 2]]);
+    $order = kioskOrder(['Amoxil' => [Packaging::Box, 1], 'Biogesic' => [Packaging::Piece, 11]]);
 
     actingAsStaff()
         ->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee($order->order_number)
-        ->assertSee('1 box of Amoxil, 2 strips of Biogesic')
+        ->assertSee('1 box of Amoxil, 11 tablets of Biogesic')
         ->assertSee('Prescription · pharmacist check')
         ->assertSee('Mark paid');
 });
@@ -93,25 +93,25 @@ test('marking an order paid turns it into purchase history', function () {
         ->and($order->completed_at)->not->toBeNull()
         ->and($maria->hasPurchasedBefore(medicine('Amoxil')))->toBeTrue()
         // Paying doesn't touch stock: checkout already took it off the shelf.
-        ->and(medicine('Amoxil')->stock)->toBe(20);
+        ->and(medicine('Amoxil')->stock)->toBe(200);
 });
 
 test('cancelling an order puts the stock back', function () {
-    $order = kioskOrder(['Biogesic' => [Packaging::Box, 2], 'Medicol Advance' => [Packaging::Strip, 4]]);
+    $order = kioskOrder(['Biogesic' => [Packaging::Box, 2], 'Medicol Advance' => [Packaging::Piece, 40]]);
 
-    expect(medicine('Biogesic')->stock)->toBe(130);
+    expect(medicine('Biogesic')->stock)->toBe(1300);
 
     actingAsStaff()
         ->patch(route('admin.orders.cancel', $order))
         ->assertSessionHas('success');
 
     expect($order->refresh()->status)->toBe(OrderStatus::Cancelled)
-        ->and(medicine('Biogesic')->stock)->toBe(150) // two boxes are 20 strips
-        ->and(medicine('Medicol Advance')->stock)->toBe(4);
+        ->and(medicine('Biogesic')->stock)->toBe(1500) // two boxes are 200 tablets
+        ->and(medicine('Medicol Advance')->stock)->toBe(40);
 });
 
 test('an order can only be handled once', function () {
-    $order = kioskOrder(['Biogesic' => [Packaging::Strip, 1]]);
+    $order = kioskOrder(['Biogesic' => [Packaging::Piece, 1]]);
 
     actingAsStaff()->patch(route('admin.orders.cancel', $order));
 
@@ -122,7 +122,7 @@ test('an order can only be handled once', function () {
         ->assertSessionHas('error');
 
     expect($order->refresh()->status)->toBe(OrderStatus::Cancelled)
-        ->and(medicine('Biogesic')->stock)->toBe(150); // restored once, not twice
+        ->and(medicine('Biogesic')->stock)->toBe(1500); // restored once, not twice
 });
 
 test('past counter sales cannot be cancelled', function () {
@@ -136,7 +136,7 @@ test('past counter sales cannot be cancelled', function () {
 });
 
 test('only staff can handle orders', function () {
-    $order = kioskOrder(['Biogesic' => [Packaging::Strip, 1]]);
+    $order = kioskOrder(['Biogesic' => [Packaging::Piece, 1]]);
 
     $this->patch(route('admin.orders.complete', $order))->assertRedirect(route('admin.login'));
 

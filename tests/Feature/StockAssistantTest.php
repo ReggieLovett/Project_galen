@@ -150,7 +150,7 @@ test('an in-stock medicine is offered as it is, with its prices', function () {
     $reply = assistant()->answer('Do you have Virlix instead?');
 
     expect(alternativeNames($reply))->toBe(['Virlix'])
-        ->and($reply->message)->toBe('Good news: Virlix is in stock, at ₱200.00 a strip or ₱1,900.00 a box. You can add it below.');
+        ->and($reply->message)->toBe('Good news: Virlix is in stock, at ₱20.00 a tablet or ₱1,900.00 for a box of 100. You can add it below.');
 });
 
 test('symptom and dosing questions are out of scope', function (string $question) {
@@ -202,9 +202,9 @@ test('follow-ups answer price, prescription, pack size and uses', function (stri
 })->with([
     'cheapest' => ['Which one is cheaper?', 'RiteMed Loratadine is the cheapest per tablet.'],
     'prescription' => ['Do they need a prescription?', "No. Claritin, RiteMed Loratadine and Allerta don't need a prescription."],
-    'pack sizes' => ['How many are in a strip and a box?', 'Allerta comes in a strip of 10 tablets for ₱120.00, or a box of 10 strips (100 tablets) for ₱1,150.00.'],
+    'pack sizes' => ['How many are in a box?', 'Allerta is sold by the tablet for ₱12.00 each, or in a box of 100 tablets for ₱1,150.00.'],
     'what it is for' => ['What is it for?', 'Claritin, RiteMed Loratadine and Allerta (loratadine): For allergies.'],
-    'in Filipino' => ['Magkano?', 'Claritin (out of stock) is ₱350.00 a strip'],
+    'in Filipino' => ['Magkano?', 'Claritin (out of stock) is ₱35.00 a tablet'],
 ]);
 
 test('a question naming two medicines compares them', function () {

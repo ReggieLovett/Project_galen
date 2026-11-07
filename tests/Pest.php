@@ -54,7 +54,7 @@ function medicine(string $name): Medicine
 }
 
 /**
- * How many strips and boxes are in the current session's basket.
+ * How many pieces and boxes are in the current session's basket.
  */
 function basketCount(): int
 {
