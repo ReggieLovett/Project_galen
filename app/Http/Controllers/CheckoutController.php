@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
-use App\Models\Medicine;
+use App\Enums\Packaging;
 use App\Models\Order;
 use App\Services\Cart;
 use App\Support\KioskSession;
@@ -48,22 +48,22 @@ class CheckoutController extends Controller
      */
     private function placeOrder(Request $request, Cart $cart): Order
     {
-        $quantities = $cart->quantities();
-
-        $medicines = Medicine::with('category')->whereKey(array_keys($quantities))->orderBy('name')->get();
+        // Read fresh inside the lock: prices and stock as they are right now.
+        $lines = $cart->lines();
 
         // Re-check everything: stock may have sold out, and the basket must
-        // never hold a prescription item this customer can't buy.
-        foreach ($medicines as $medicine) {
+        // never hold a prescription item this customer can't buy. A medicine
+        // bought by the strip and by the box draws on the same strips.
+        foreach ($lines->pluck('medicine')->unique('id') as $medicine) {
             if (Gate::denies('addToBasket', $medicine)) {
                 throw ValidationException::withMessages([
                     'basket' => "{$medicine->name} needs a prescription on file. Please remove it or ask at the counter.",
                 ]);
             }
 
-            if ($medicine->stock < $quantities[$medicine->id]) {
+            if ($medicine->stock < $cart->stripsOf($medicine)) {
                 throw ValidationException::withMessages([
-                    'basket' => "Sorry, only {$medicine->stock} of {$medicine->name} left. Please update your basket.",
+                    'basket' => 'Sorry, only '.Packaging::Strip->count($medicine->stock)." of {$medicine->name} left. Please update your basket.",
                 ]);
             }
         }
@@ -73,25 +73,28 @@ class CheckoutController extends Controller
             'user_id' => $request->user()?->id,
             'channel' => OrderChannel::Kiosk,
             'status' => OrderStatus::AwaitingPayment,
-            'item_count' => array_sum($quantities),
-            'total' => $medicines->sum(fn (Medicine $medicine) => $medicine->price * $quantities[$medicine->id]),
+            'item_count' => $lines->sum('quantity'),
+            'total' => $lines->sum('line_total'),
         ]);
 
-        foreach ($medicines as $medicine) {
-            $quantity = $quantities[$medicine->id];
+        foreach ($lines as $line) {
+            $medicine = $line['medicine'];
+            $strips = $line['quantity'] * $medicine->stripsPer($line['packaging']);
 
             $order->items()->create([
                 'medicine_id' => $medicine->id,
                 'name' => $medicine->name,
                 'brand' => $medicine->brand,
                 'strength' => $medicine->strength,
-                'unit_price' => $medicine->price,
-                'quantity' => $quantity,
-                'line_total' => $medicine->price * $quantity,
+                'packaging' => $line['packaging'],
+                'unit_price' => $line['unit_price'],
+                'quantity' => $line['quantity'],
+                'strip_count' => $strips,
+                'line_total' => $line['line_total'],
             ]);
 
             // Held for this order until the cashier completes or cancels it.
-            $medicine->decrement('stock', $quantity);
+            $medicine->decrement('stock', $strips);
         }
 
         return $order;

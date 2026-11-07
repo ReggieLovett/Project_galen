@@ -9,18 +9,61 @@ use Illuminate\Database\Seeder;
 class MedicineSeeder extends Seeder
 {
     /**
-     * Seed the catalogue.
+     * What each active ingredient is for, in plain words. Every brand with
+     * the same ingredient gets the same text. These are label-style uses for
+     * the customer, never dosing advice: that stays with the pharmacist.
      *
-     * Six products are out of stock so the stock assistant has something to
-     * do. Each scenario it can be tested with:
+     * @var array<string, string>
+     */
+    private const USES = [
+        'Paracetamol' => 'For fever and mild to moderate pain, such as headache, toothache, body aches and menstrual cramps.',
+        'Ibuprofen' => 'For pain, swelling and fever, such as headache, toothache, muscle pain and menstrual cramps.',
+        'Ibuprofen + Paracetamol' => 'Two pain relievers in one, for body and muscle pain, headache and toothache.',
+        'Mefenamic Acid' => 'For mild to moderate pain, such as toothache, headache and menstrual cramps.',
+        'Phenylephrine + Chlorphenamine + Paracetamol' => 'For colds and flu. Relieves a blocked or runny nose, sneezing, fever, headache and body aches.',
+        'Carbocisteine' => 'Loosens thick phlegm, so a cough with phlegm is easier to clear.',
+        'Lagundi Leaf' => 'A herbal medicine made from lagundi leaves, for cough.',
+        'Loratadine' => 'For allergies. Relieves sneezing, a runny nose, itchy or watery eyes and itchy skin.',
+        'Cetirizine' => 'For allergies. Relieves sneezing, a runny nose, itchy eyes and itchy skin rashes (hives).',
+        'Aluminum Hydroxide + Magnesium Hydroxide + Simeticone' => 'An antacid for heartburn, acid indigestion, an upset stomach and gas pain.',
+        'Loperamide' => 'For sudden diarrhea. It slows down loose, watery stools.',
+        'Hyoscine Butylbromide' => 'For stomach cramps and tummy pain caused by spasms in the stomach or intestines.',
+        'Ascorbic Acid' => 'Vitamin C, to help keep your immune system healthy.',
+        'Sodium Ascorbate' => 'Vitamin C in a non-acidic form that is gentler on the stomach, to help keep your immune system healthy.',
+        'Amoxicillin' => 'An antibiotic for infections caused by bacteria, such as some ear, throat, chest and urinary infections. It does not work on colds or flu.',
+        'Amoxicillin + Clavulanic Acid' => 'An antibiotic combination for infections caused by bacteria, including some that amoxicillin alone cannot treat. It does not work on colds or flu.',
+        'Amlodipine' => 'Lowers high blood pressure and helps prevent chest pain (angina). A maintenance medicine for long-term use.',
+        'Losartan' => 'Lowers high blood pressure and helps protect the kidneys. A maintenance medicine for long-term use.',
+        'Atorvastatin' => 'Lowers "bad" cholesterol to help prevent heart attack and stroke. A maintenance medicine for long-term use.',
+        'Metformin' => 'Helps control blood sugar in type 2 diabetes. A maintenance medicine for long-term use.',
+    ];
+
+    /**
+     * Seed the catalogue: brands sold in Philippine drugstores, priced in
+     * pesos. Prices are sample figures for the demo, not a price list.
      *
-     *  Advil          -> Motrin IB (same tablet), Nurofen (capsule)
-     *  Claritin       -> Perrigo loratadine, Alavert. Never Zyrtec or Allegra,
-     *                    which treat the same thing with a different ingredient.
-     *  Pepcid AC      -> Teva famotidine
-     *  Benadryl       -> nothing in stock; the assistant says so
-     *  Lipitor (Rx)   -> Sandoz atorvastatin; Maria can add it, guests cannot
-     *  Zithromax (Rx) -> Sandoz azithromycin; still blocked for Maria
+     * Every medicine comes in blister strips, sold one strip at a time or
+     * by the box. Stock is counted in strips.
+     *
+     * Prescription (Rx) medicines are the ones the Philippine FDA registers
+     * as prescription drugs: antibiotics, blood pressure, cholesterol and
+     * diabetes maintenance medicines.
+     *
+     * Seven products are out of stock so the stock assistant has something
+     * to do. Each scenario it can be tested with:
+     *
+     *  Advil            -> Medicol Advance (same softgel), RiteMed Ibuprofen
+     *                      (tablet). Never Alaxan FR, which adds paracetamol.
+     *  Claritin         -> RiteMed Loratadine, Allerta. Never Virlix, which
+     *                      treats the same thing with a different ingredient.
+     *  Bioflu           -> Neozep Forte (same three ingredients)
+     *  Imodium          -> Diatabs
+     *  Buscopan         -> nothing in stock; the assistant says so
+     *  Lipitor (Rx)     -> RiteMed Atorvastatin; Maria can add it, guests cannot
+     *  Augmentin (Rx)   -> RiteMed Co-Amoxiclav; still blocked for Maria
+     *
+     * Medicol Advance (4 strips) and Ascof Lagundi (8 strips) have too few
+     * strips left for a full box, so only the strip can be chosen.
      */
     public function run(): void
     {
@@ -29,57 +72,61 @@ class MedicineSeeder extends Seeder
 
         $catalogue = [
             // Pain & Fever
-            [$otc, 'Advil Pain Reliever', 'Advil', 'Ibuprofen', '200 mg', 'Tablet', '24 tablets', 'Pain & Fever', 8.49, 0],
-            [$otc, 'Motrin IB', 'Motrin', 'Ibuprofen', '200 mg', 'Tablet', '24 tablets', 'Pain & Fever', 7.99, 18],
-            [$otc, 'Nurofen Express', 'Nurofen', 'Ibuprofen', '200 mg', 'Liquid capsule', '16 capsules', 'Pain & Fever', 6.79, 9],
-            [$otc, 'Tylenol Extra Strength', 'Tylenol', 'Acetaminophen', '500 mg', 'Caplet', '24 caplets', 'Pain & Fever', 9.29, 25],
-            [$otc, 'Panadol Advance', 'Panadol', 'Acetaminophen', '500 mg', 'Tablet', '24 tablets', 'Pain & Fever', 7.49, 30],
-            [$otc, 'Aleve All Day Strong', 'Aleve', 'Naproxen Sodium', '220 mg', 'Tablet', '24 tablets', 'Pain & Fever', 8.99, 4],
-            [$otc, 'Bayer Aspirin', 'Bayer', 'Aspirin', '325 mg', 'Tablet', '100 tablets', 'Pain & Fever', 7.19, 15],
+            [$otc, 'Biogesic', 'Biogesic', 'Paracetamol', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 50.00, 480.00, 150],
+            [$otc, 'RiteMed Paracetamol', 'RiteMed', 'Paracetamol', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 20.00, 190.00, 80],
+            [$otc, 'Panadol', 'Panadol', 'Paracetamol', '500 mg', 'Caplet', 10, 10, 'Pain & Fever', 70.00, 670.00, 45],
+            [$otc, 'Advil', 'Advil', 'Ibuprofen', '200 mg', 'Softgel capsule', 10, 10, 'Pain & Fever', 100.00, 960.00, 0],
+            [$otc, 'Medicol Advance', 'Medicol', 'Ibuprofen', '200 mg', 'Softgel capsule', 10, 10, 'Pain & Fever', 80.00, 770.00, 4],
+            [$otc, 'RiteMed Ibuprofen', 'RiteMed', 'Ibuprofen', '200 mg', 'Tablet', 10, 10, 'Pain & Fever', 35.00, 330.00, 60],
+            [$otc, 'Alaxan FR', 'Alaxan', 'Ibuprofen + Paracetamol', '200 mg / 325 mg', 'Capsule', 10, 10, 'Pain & Fever', 90.00, 860.00, 70],
+            [$otc, 'Dolfenal', 'Dolfenal', 'Mefenamic Acid', '500 mg', 'Tablet', 10, 10, 'Pain & Fever', 180.00, 1720.00, 30],
+
+            // Cough & Colds
+            [$otc, 'Neozep Forte', 'Neozep', 'Phenylephrine + Chlorphenamine + Paracetamol', '10 mg / 2 mg / 500 mg', 'Tablet', 10, 10, 'Cough & Colds', 65.00, 620.00, 90],
+            [$otc, 'Bioflu', 'Bioflu', 'Phenylephrine + Chlorphenamine + Paracetamol', '10 mg / 2 mg / 500 mg', 'Tablet', 10, 10, 'Cough & Colds', 80.00, 760.00, 0],
+            [$otc, 'Solmux', 'Solmux', 'Carbocisteine', '500 mg', 'Capsule', 10, 10, 'Cough & Colds', 100.00, 950.00, 40],
+            [$otc, 'RiteMed Carbocisteine', 'RiteMed', 'Carbocisteine', '500 mg', 'Capsule', 10, 10, 'Cough & Colds', 50.00, 470.00, 35],
+            [$otc, 'Ascof Lagundi', 'Ascof', 'Lagundi Leaf', '600 mg', 'Tablet', 10, 10, 'Cough & Colds', 70.00, 660.00, 8],
 
             // Allergy
-            [$otc, 'Claritin 24-Hour', 'Claritin', 'Loratadine', '10 mg', 'Tablet', '10 tablets', 'Allergy', 12.99, 0],
-            [$otc, 'Loratadine Tablets', 'Perrigo', 'Loratadine', '10 mg', 'Tablet', '30 tablets', 'Allergy', 9.99, 14],
-            [$otc, 'Alavert 24-Hour', 'Alavert', 'Loratadine', '10 mg', 'Dissolving tablet', '12 tablets', 'Allergy', 10.49, 11],
-            [$otc, 'Zyrtec Allergy', 'Zyrtec', 'Cetirizine', '10 mg', 'Tablet', '14 tablets', 'Allergy', 13.49, 14],
-            [$otc, 'Allegra Allergy 24HR', 'Allegra', 'Fexofenadine', '180 mg', 'Tablet', '15 tablets', 'Allergy', 15.99, 7],
-            [$otc, 'Benadryl Allergy', 'Benadryl', 'Diphenhydramine', '25 mg', 'Tablet', '24 tablets', 'Allergy', 6.99, 0],
+            [$otc, 'Claritin', 'Claritin', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 350.00, 3400.00, 0],
+            [$otc, 'Allerta', 'Allerta', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 120.00, 1150.00, 40],
+            [$otc, 'RiteMed Loratadine', 'RiteMed', 'Loratadine', '10 mg', 'Tablet', 10, 10, 'Allergy', 50.00, 470.00, 30],
+            [$otc, 'Virlix', 'Virlix', 'Cetirizine', '10 mg', 'Tablet', 10, 10, 'Allergy', 200.00, 1900.00, 25],
 
-            // Cold & Flu
-            [$otc, 'Mucinex 12 Hour', 'Mucinex', 'Guaifenesin', '600 mg', 'Extended-release tablet', '20 tablets', 'Cold & Flu', 14.99, 10],
-            [$otc, 'Robitussin Chest Congestion', 'Robitussin', 'Guaifenesin', '100 mg/5 mL', 'Syrup', '118 mL', 'Cold & Flu', 9.49, 6],
-            [$otc, 'Sudafed PE', 'Sudafed', 'Phenylephrine', '10 mg', 'Tablet', '18 tablets', 'Cold & Flu', 6.49, 11],
+            // Stomach & Digestion
+            [$otc, 'Kremil-S', 'Kremil-S', 'Aluminum Hydroxide + Magnesium Hydroxide + Simeticone', '178 mg / 233 mg / 30 mg', 'Chewable tablet', 10, 10, 'Stomach & Digestion', 90.00, 860.00, 50],
+            [$otc, 'Diatabs', 'Diatabs', 'Loperamide', '2 mg', 'Capsule', 10, 10, 'Stomach & Digestion', 80.00, 760.00, 45],
+            [$otc, 'Imodium', 'Imodium', 'Loperamide', '2 mg', 'Capsule', 10, 10, 'Stomach & Digestion', 140.00, 1350.00, 0],
+            [$otc, 'Buscopan', 'Buscopan', 'Hyoscine Butylbromide', '10 mg', 'Tablet', 10, 10, 'Stomach & Digestion', 180.00, 1750.00, 0],
 
-            // Digestive
-            [$otc, 'Pepcid AC Maximum Strength', 'Pepcid', 'Famotidine', '20 mg', 'Tablet', '25 tablets', 'Digestive', 11.99, 0],
-            [$otc, 'Famotidine Tablets', 'Teva', 'Famotidine', '20 mg', 'Tablet', '30 tablets', 'Digestive', 6.99, 22],
-            [$otc, 'Imodium A-D', 'Imodium', 'Loperamide', '2 mg', 'Caplet', '12 caplets', 'Digestive', 7.99, 8],
-            [$otc, 'Tums Extra Strength', 'Tums', 'Calcium Carbonate', '750 mg', 'Chewable tablet', '96 tablets', 'Digestive', 6.49, 20],
-            [$otc, 'Prilosec OTC', 'Prilosec', 'Omeprazole', '20 mg', 'Delayed-release tablet', '14 tablets', 'Digestive', 13.99, 5],
+            // Vitamins
+            [$otc, 'Poten-Cee', 'Poten-Cee', 'Ascorbic Acid', '500 mg', 'Tablet', 10, 10, 'Vitamins', 70.00, 670.00, 60],
+            [$otc, 'RiteMed Ascorbic Acid', 'RiteMed', 'Ascorbic Acid', '500 mg', 'Tablet', 10, 10, 'Vitamins', 25.00, 240.00, 50],
+            [$otc, 'Fern-C', 'Fern-C', 'Sodium Ascorbate', '568.18 mg', 'Capsule', 10, 10, 'Vitamins', 80.00, 760.00, 40],
 
-            // Skin Care
-            [$otc, 'Cortizone-10 Maximum Strength', 'Cortizone-10', 'Hydrocortisone', '1%', 'Cream', '28 g', 'Skin Care', 7.49, 9],
+            // Prescription: Antibiotics
+            [$rx, 'Amoxil', 'Amoxil', 'Amoxicillin', '500 mg', 'Capsule', 10, 10, 'Antibiotics', 220.00, 2100.00, 30],
+            [$rx, 'RiteMed Amoxicillin', 'RiteMed', 'Amoxicillin', '500 mg', 'Capsule', 10, 10, 'Antibiotics', 60.00, 570.00, 50],
+            [$rx, 'Augmentin', 'Augmentin', 'Amoxicillin + Clavulanic Acid', '500 mg / 125 mg', 'Tablet', 7, 2, 'Antibiotics', 595.00, 1170.00, 0],
+            [$rx, 'RiteMed Co-Amoxiclav', 'RiteMed', 'Amoxicillin + Clavulanic Acid', '500 mg / 125 mg', 'Tablet', 7, 2, 'Antibiotics', 245.00, 480.00, 20],
 
             // Prescription: Heart & Blood Pressure
-            [$rx, 'Lipitor', 'Lipitor', 'Atorvastatin', '20 mg', 'Tablet', '30 tablets', 'Heart & Blood Pressure', 42.00, 0],
-            [$rx, 'Atorvastatin Calcium', 'Sandoz', 'Atorvastatin', '20 mg', 'Tablet', '30 tablets', 'Heart & Blood Pressure', 12.50, 40],
-            [$rx, 'Norvasc', 'Norvasc', 'Amlodipine', '5 mg', 'Tablet', '30 tablets', 'Heart & Blood Pressure', 28.00, 22],
-            [$rx, 'Zestril', 'Zestril', 'Lisinopril', '10 mg', 'Tablet', '30 tablets', 'Heart & Blood Pressure', 18.00, 30],
+            [$rx, 'Norvasc', 'Norvasc', 'Amlodipine', '5 mg', 'Tablet', 10, 3, 'Heart & Blood Pressure', 450.00, 1330.00, 24],
+            [$rx, 'RiteMed Amlodipine', 'RiteMed', 'Amlodipine', '5 mg', 'Tablet', 10, 10, 'Heart & Blood Pressure', 80.00, 760.00, 50],
+            [$rx, 'Cozaar', 'Cozaar', 'Losartan', '50 mg', 'Tablet', 10, 3, 'Heart & Blood Pressure', 500.00, 1480.00, 21],
+            [$rx, 'RiteMed Losartan', 'RiteMed', 'Losartan', '50 mg', 'Tablet', 10, 10, 'Heart & Blood Pressure', 100.00, 950.00, 40],
+
+            // Prescription: Cholesterol
+            [$rx, 'Lipitor', 'Lipitor', 'Atorvastatin', '20 mg', 'Tablet', 10, 3, 'Cholesterol', 700.00, 2070.00, 0],
+            [$rx, 'RiteMed Atorvastatin', 'RiteMed', 'Atorvastatin', '20 mg', 'Tablet', 10, 10, 'Cholesterol', 150.00, 1430.00, 40],
 
             // Prescription: Diabetes
-            [$rx, 'Glucophage', 'Glucophage', 'Metformin', '500 mg', 'Tablet', '60 tablets', 'Diabetes', 15.00, 50],
-            [$rx, 'Metformin Hydrochloride', 'Teva', 'Metformin', '500 mg', 'Tablet', '60 tablets', 'Diabetes', 6.00, 60],
-
-            // Prescription: Infections
-            [$rx, 'Amoxil', 'Amoxil', 'Amoxicillin', '500 mg', 'Capsule', '21 capsules', 'Infections', 16.00, 25],
-            [$rx, 'Zithromax Z-Pak', 'Zithromax', 'Azithromycin', '250 mg', 'Tablet', '6 tablets', 'Infections', 24.00, 0],
-            [$rx, 'Azithromycin', 'Sandoz', 'Azithromycin', '250 mg', 'Tablet', '6 tablets', 'Infections', 11.00, 12],
-
-            // Prescription: Respiratory
-            [$rx, 'Ventolin HFA', 'Ventolin', 'Albuterol', '90 mcg/dose', 'Inhaler', '200 doses', 'Respiratory', 38.00, 6],
+            [$rx, 'Glucophage', 'Glucophage', 'Metformin', '500 mg', 'Tablet', 10, 10, 'Diabetes', 80.00, 760.00, 60],
+            [$rx, 'RiteMed Metformin', 'RiteMed', 'Metformin', '500 mg', 'Tablet', 10, 10, 'Diabetes', 30.00, 285.00, 60],
         ];
 
-        foreach ($catalogue as [$category, $name, $brand, $ingredient, $strength, $form, $pack, $class, $price, $stock]) {
+        foreach ($catalogue as [$category, $name, $brand, $ingredient, $strength, $form, $piecesPerStrip, $stripsPerBox, $class, $stripPrice, $boxPrice, $stock]) {
             Medicine::create([
                 'category_id' => $category,
                 'name' => $name,
@@ -87,9 +134,12 @@ class MedicineSeeder extends Seeder
                 'active_ingredient' => $ingredient,
                 'strength' => $strength,
                 'dosage_form' => $form,
-                'pack_size' => $pack,
+                'pieces_per_strip' => $piecesPerStrip,
+                'strips_per_box' => $stripsPerBox,
                 'therapeutic_class' => $class,
-                'price' => $price,
+                'description' => self::USES[$ingredient] ?? null,
+                'strip_price' => $stripPrice,
+                'box_price' => $boxPrice,
                 'stock' => $stock,
             ]);
         }

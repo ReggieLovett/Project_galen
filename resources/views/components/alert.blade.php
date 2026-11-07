@@ -2,7 +2,7 @@
 
 @php
     $styles = [
-        'success' => 'bg-brand-soft text-brand-hover',
+        'success' => 'bg-ok-soft text-ok',
         'error' => 'bg-danger-soft text-danger',
     ][$type];
 @endphp

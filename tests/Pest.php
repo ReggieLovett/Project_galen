@@ -54,9 +54,9 @@ function medicine(string $name): Medicine
 }
 
 /**
- * How many items are in the current session's basket.
+ * How many strips and boxes are in the current session's basket.
  */
 function basketCount(): int
 {
-    return array_sum(session('kiosk.cart', []));
+    return collect(session('kiosk.cart', []))->flatten()->sum();
 }

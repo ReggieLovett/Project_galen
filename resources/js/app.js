@@ -122,23 +122,69 @@ Alpine.data('receipt', ({ seconds, home }) => ({
     },
 }));
 
-// Five quick taps on the idle screen's logo opens the staff login. A single
-// tap behaves like the rest of the screen and starts a session.
+// The +/- counters in the "How many would you like?" chooser. Strips and
+// boxes come off the same shelf stock (counted in strips), so adding a box
+// lowers how many strips are left and the other way round. `lineLeft` is
+// what the per-item limit still allows after the basket. The server checks
+// everything again when the form is sent.
+Alpine.data('packCounter', ({ shelf, stripsPerBox, lineLeft, prices, currency }) => ({
+    counts: { strip: 0, box: 0 },
+
+    init() {
+        if (this.max('strip') > 0) this.counts.strip = 1;
+    },
+
+    max(packaging) {
+        const stripsPer = packaging === 'box' ? stripsPerBox : 1;
+        const heldByOther = packaging === 'box' ? this.counts.strip : this.counts.box * stripsPerBox;
+
+        return Math.max(0, Math.min(lineLeft[packaging], Math.floor((shelf - heldByOther) / stripsPer)));
+    },
+
+    step(packaging, by) {
+        this.counts[packaging] = Math.max(0, Math.min(this.counts[packaging] + by, this.max(packaging)));
+    },
+
+    get empty() {
+        return this.counts.strip + this.counts.box === 0;
+    },
+
+    get total() {
+        return this.counts.strip * prices.strip + this.counts.box * prices.box;
+    },
+
+    get summary() {
+        const parts = [
+            this.counts.strip && `${this.counts.strip} ${this.counts.strip === 1 ? 'strip' : 'strips'}`,
+            this.counts.box && `${this.counts.box} ${this.counts.box === 1 ? 'box' : 'boxes'}`,
+        ].filter(Boolean);
+
+        return parts.length ? parts.join(' and ') : 'Tap + to choose how many';
+    },
+
+    money(amount) {
+        return new Intl.NumberFormat('en', { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).format(amount);
+    },
+}));
+
+// A double tap (or double click) on the idle screen's logo opens the staff
+// login. A single tap behaves like the rest of the screen and starts a
+// session, once it is clear no second tap is coming.
 Alpine.data('staffDoor', (url) => ({
     taps: 0,
 
     tap() {
         clearTimeout(this.timer);
 
-        if (++this.taps >= 5) {
+        if (++this.taps >= 2) {
             window.location.assign(url);
             return;
         }
 
         this.timer = setTimeout(() => {
-            if (this.taps === 1) this.$el.closest('form').requestSubmit();
             this.taps = 0;
-        }, 600);
+            this.$el.closest('form').requestSubmit();
+        }, 400);
     },
 }));
 

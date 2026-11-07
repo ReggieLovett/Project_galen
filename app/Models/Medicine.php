@@ -2,19 +2,23 @@
 
 namespace App\Models;
 
+use App\Enums\Packaging;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 #[Fillable([
-    'category_id', 'name', 'brand', 'active_ingredient', 'strength',
-    'dosage_form', 'pack_size', 'therapeutic_class', 'price', 'stock',
+    'category_id', 'name', 'brand', 'active_ingredient', 'strength', 'dosage_form',
+    'pieces_per_strip', 'strips_per_box', 'therapeutic_class', 'description', 'strip_price',
+    'box_price', 'image_path', 'stock',
 ])]
 class Medicine extends Model
 {
+    /** Strips on the shelf at or below which staff see a "running low" alert. */
     public const LOW_STOCK = 5;
 
     /**
@@ -25,7 +29,10 @@ class Medicine extends Model
     protected function casts(): array
     {
         return [
-            'price' => 'decimal:2',
+            'strip_price' => 'decimal:2',
+            'box_price' => 'decimal:2',
+            'pieces_per_strip' => 'integer',
+            'strips_per_box' => 'integer',
             'stock' => 'integer',
         ];
     }
@@ -62,7 +69,65 @@ class Medicine extends Model
     }
 
     /**
-     * "Motrin IB", "Sandoz Atorvastatin Calcium": the name with its brand.
+     * How many strips one unit of this packaging takes off the shelf.
+     */
+    public function stripsPer(Packaging $packaging): int
+    {
+        return $packaging === Packaging::Box ? $this->strips_per_box : 1;
+    }
+
+    /**
+     * Price of one strip or one box, e.g. "480.00".
+     */
+    public function priceOf(Packaging $packaging): string
+    {
+        return $packaging === Packaging::Box ? $this->box_price : $this->strip_price;
+    }
+
+    /**
+     * Is there enough on the shelf for at least one of this packaging?
+     */
+    public function canSell(Packaging $packaging): bool
+    {
+        return $this->stock >= $this->stripsPer($packaging);
+    }
+
+    /**
+     * What a box saves over buying its strips one by one.
+     */
+    public function boxSavings(): float
+    {
+        return max(0, round($this->strip_price * $this->strips_per_box - $this->box_price, 2));
+    }
+
+    /**
+     * "tablets", "capsules", "caplets": what is in each blister pocket.
+     */
+    public function pieceName(): string
+    {
+        return Str::plural(Str::lower(Str::afterLast($this->dosage_form, ' ')));
+    }
+
+    /**
+     * "Strip of 10 tablets", "Box of 3 strips (30 tablets)".
+     */
+    public function packDescription(Packaging $packaging): string
+    {
+        return $packaging === Packaging::Box
+            ? "Box of {$this->strips_per_box} strips (".($this->strips_per_box * $this->pieces_per_strip)." {$this->pieceName()})"
+            : "Strip of {$this->pieces_per_strip} {$this->pieceName()}";
+    }
+
+    /**
+     * The product photo, when staff have added one under public/.
+     */
+    public function imageUrl(): ?string
+    {
+        return $this->image_path ? asset($this->image_path) : null;
+    }
+
+    /**
+     * "Biogesic", "RiteMed Paracetamol": the name with its brand.
      */
     public function fullName(): string
     {
@@ -70,7 +135,18 @@ class Medicine extends Model
     }
 
     /**
-     * "Ibuprofen 200 mg" - how the drug itself is named, independent of brand.
+     * The separate ingredients of a combination product:
+     * "Phenylephrine + Chlorphenamine + Paracetamol" → three names.
+     *
+     * @return list<string>
+     */
+    public function ingredients(): array
+    {
+        return array_map(trim(...), explode('+', $this->active_ingredient));
+    }
+
+    /**
+     * "Paracetamol 500 mg" - how the drug itself is named, independent of brand.
      */
     public function drugLabel(): string
     {
@@ -150,6 +226,6 @@ class Medicine extends Model
             ->inStock()
             ->orderByRaw('CASE WHEN strength = ? THEN 0 ELSE 1 END', [$medicine->strength])
             ->orderByRaw('CASE WHEN dosage_form = ? THEN 0 ELSE 1 END', [$medicine->dosage_form])
-            ->orderBy('price');
+            ->orderBy('strip_price');
     }
 }

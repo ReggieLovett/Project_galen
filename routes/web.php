@@ -31,8 +31,8 @@ Route::post('/kiosk/assistant', [AssistantController::class, 'store'])->middlewa
 Route::post('/kiosk/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 Route::get('/receipt/{order:order_number}', [ReceiptController::class, 'show'])->middleware('signed')->name('receipt');
 
-// STAFF ROUTES - not linked from the kiosk. On the kiosk, tap the logo on the
-// idle screen five times (see welcome.blade.php); other devices use the URL.
+// STAFF ROUTES - not linked from the kiosk. On the kiosk, double-tap the logo
+// on the idle screen (see welcome.blade.php); other devices use the URL.
 Route::prefix(config('kiosk.admin.path'))->name('admin.')->group(function () {
     Route::middleware('guest:admin')->group(function () {
         Route::get('/login', [Admin\AuthController::class, 'showLogin'])->name('login');

@@ -65,7 +65,7 @@ test('staff can log in and see the dashboard', function () {
     $this->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee('Signed in as Priya Nair')
-        ->assertSee('Advil Pain Reliever'); // out of stock alert
+        ->assertSee('Buscopan'); // out of stock alert
 
     // Already signed in: the login page sends staff on to the dashboard.
     $this->get(route('admin.login'))->assertRedirect(route('admin.dashboard'));

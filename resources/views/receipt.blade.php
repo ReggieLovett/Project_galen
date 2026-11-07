@@ -80,7 +80,7 @@
                         <span>{{ $item->quantity }} × {{ $item->name }}</span>
                         <span class="tabular-nums"><x-money :amount="$item->line_total" /></span>
                     </div>
-                    <p class="text-ink-muted">{{ $item->brand }} · {{ $item->strength }} · <x-money :amount="$item->unit_price" /> each</p>
+                    <p class="text-ink-muted">{{ $item->packaging->label() }} · {{ $item->strength }} · <x-money :amount="$item->unit_price" /> per {{ Str::lower($item->packaging->label()) }}</p>
                 </li>
             @endforeach
         </ul>

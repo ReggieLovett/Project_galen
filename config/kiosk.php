@@ -10,8 +10,8 @@ return [
 
     'name' => env('KIOSK_NAME', 'Riverside Pharmacy'),
 
-    // ISO 4217 code, e.g. USD or PHP. Prices are formatted with Number::currency().
-    'currency' => env('KIOSK_CURRENCY', 'USD'),
+    // ISO 4217 code. Philippine pesos (₱) by default; prices are formatted by <x-money>.
+    'currency' => env('KIOSK_CURRENCY', 'PHP'),
 
     /*
     |--------------------------------------------------------------------------
@@ -37,9 +37,9 @@ return [
     | Staff area
     |--------------------------------------------------------------------------
     |
-    | Nothing on the kiosk links here. On the kiosk itself, staff tap the
-    | logo on the "Touch to begin" screen five times in a row (a kiosk
-    | browser has no address bar). Other devices open the URL. The seeded
+    | Nothing on the kiosk links here. On the kiosk itself, staff double-tap
+    | the logo on the "Touch to begin" screen (a kiosk browser has no
+    | address bar). Other devices open the URL. The seeded
     | admin uses the email and password below.
     |
     */

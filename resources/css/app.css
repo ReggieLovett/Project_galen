@@ -7,34 +7,39 @@
     --font-sans: 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Figtree', ui-sans-serif, system-ui, sans-serif;
 
-    /* Surfaces */
-    --color-canvas: #f0fdf4;
+    /* Surfaces: white cards on a faint warm grey, like a pharmacy shelf */
+    --color-canvas: #f7f4f4;
     --color-surface: #ffffff;
-    --color-sunken: #e8f0ec;
-    --color-line: #cfe3d6;
-    --color-line-strong: #a7c9b3;
+    --color-sunken: #f1eaea;
+    --color-line: #eadede;
+    --color-line-strong: #d6c2c2;
 
     /* Text */
-    --color-ink: #0f2e1d;
-    --color-ink-muted: #475569;
+    --color-ink: #221616;
+    --color-ink-muted: #5f5151;
 
-    /* Brand: primary actions */
-    --color-brand: #15803d;
-    --color-brand-hover: #166534;
-    --color-brand-soft: #dcfce7;
+    /* Brand: drugstore red and white. White text on brand passes WCAG AA (5.2:1). */
+    --color-brand: #d71920;
+    --color-brand-hover: #b0131a;
+    --color-brand-deep: #8c0f15;
+    --color-brand-soft: #fde8e8;
 
-    /* Stock assistant (AI) */
-    --color-assist: #0369a1;
-    --color-assist-hover: #075985;
-    --color-assist-soft: #e0f2fe;
+    /* Stock assistant (AI): navy, so it never looks like a brand button */
+    --color-assist: #1e3a8a;
+    --color-assist-hover: #172f6f;
+    --color-assist-soft: #e6ecf9;
+
+    /* Good news: "In stock", "Marked as paid". Red would read as a warning. */
+    --color-ok: #15803d;
+    --color-ok-soft: #dcfce7;
 
     /* Prescription */
     --color-rx: #92400e;
     --color-rx-soft: #fef3c7;
 
-    /* Out of stock / errors */
-    --color-danger: #b91c1c;
-    --color-danger-soft: #fee2e2;
+    /* Errors: a deeper rose, so they stand apart from the brand red */
+    --color-danger: #9f1239;
+    --color-danger-soft: #ffe4e6;
 
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
 }
@@ -144,7 +149,7 @@
 
     .chip[aria-pressed='true'],
     .chip[aria-current='true'] {
-        @apply border-ink bg-ink text-white;
+        @apply border-brand bg-brand text-white;
     }
 
     .badge {
