@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Packaging;
 use App\Models\Medicine;
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
@@ -11,7 +12,11 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The kiosk basket, kept in the session as [medicine id => quantity].
+ * The kiosk basket, kept in the session as
+ * [medicine id => [packaging => quantity]], e.g. [7 => ['piece' => 11, 'box' => 1]].
+ *
+ * A medicine can be in the basket as single pieces and by the box at the
+ * same time. Both draw on the same shelf stock, which is counted in pieces.
  */
 class Cart
 {
@@ -20,7 +25,7 @@ class Cart
     public function __construct(private Session $session) {}
 
     /**
-     * @return array<int, int>
+     * @return array<int, array<string, int>>
      */
     public function quantities(): array
     {
@@ -32,30 +37,66 @@ class Cart
         return $this->quantities() === [];
     }
 
-    public function has(Medicine $medicine): bool
+    public function has(Medicine $medicine, Packaging $packaging): bool
     {
-        return $this->quantityOf($medicine) > 0;
+        return $this->quantityOf($medicine, $packaging) > 0;
     }
 
-    public function quantityOf(Medicine $medicine): int
+    public function quantityOf(Medicine $medicine, Packaging $packaging): int
     {
-        return $this->quantities()[$medicine->id] ?? 0;
-    }
-
-    public function add(Medicine $medicine, int $quantity = 1): void
-    {
-        $this->put($medicine, $this->quantityOf($medicine) + $quantity);
+        return $this->quantities()[$medicine->id][$packaging->value] ?? 0;
     }
 
     /**
-     * Set an item's quantity, capped by shelf stock and the per-item limit.
+     * How many pieces of this medicine the basket would take off the shelf.
+     */
+    public function piecesOf(Medicine $medicine): int
+    {
+        return collect($this->quantities()[$medicine->id] ?? [])
+            ->sum(fn (int $quantity, string $packaging) => $quantity * $medicine->piecesPer(Packaging::from($packaging)));
+    }
+
+    public function add(Medicine $medicine, Packaging $packaging, int $quantity = 1): void
+    {
+        $this->put($medicine, $packaging, $this->quantityOf($medicine, $packaging) + $quantity);
+    }
+
+    /**
+     * Add pieces and boxes of one medicine in one tap. Either all of it fits
+     * the shelf stock (and the per-item limit, when one is set), or nothing
+     * is added.
+     *
+     * @param  array<string, int>  $quantities  packaging value => how many to add, e.g. ['piece' => 11, 'box' => 1]
      *
      * @throws ValidationException
      */
-    public function put(Medicine $medicine, int $quantity): void
+    public function addMany(Medicine $medicine, array $quantities): void
+    {
+        $before = $this->quantities();
+
+        try {
+            foreach (Packaging::cases() as $packaging) {
+                if (($quantities[$packaging->value] ?? 0) > 0) {
+                    $this->add($medicine, $packaging, $quantities[$packaging->value]);
+                }
+            }
+        } catch (ValidationException $e) {
+            $this->session->put(self::KEY, $before);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Set how many pieces or boxes of a medicine the customer wants, capped
+     * by shelf stock and, when one is set, the per-item limit.
+     *
+     * @throws ValidationException
+     */
+    public function put(Medicine $medicine, Packaging $packaging, int $quantity): void
     {
         if ($quantity <= 0) {
-            $this->remove($medicine);
+            $this->remove($medicine, $packaging);
 
             return;
         }
@@ -66,22 +107,51 @@ class Cart
             ]);
         }
 
-        $limit = min($medicine->stock, config('kiosk.max_quantity_per_item'));
+        $onShelf = $this->onShelfFor($medicine, $packaging);
+        $limit = $this->maxQuantity($medicine, $packaging);
 
         if ($quantity > $limit) {
             throw ValidationException::withMessages([
-                'quantity' => $limit === $medicine->stock
-                    ? "Only {$limit} of {$medicine->name} left in stock."
-                    : "You can buy up to {$limit} of {$medicine->name} per visit.",
+                'quantity' => match (true) {
+                    $onShelf === 0 && $packaging === Packaging::Box => "There isn't a full box of {$medicine->name} left. You can buy single {$medicine->pieceName()} instead.",
+                    $onShelf === 0 => "Your basket already has all the {$medicine->name} we have in stock.",
+                    $limit === $onShelf => 'Only '.$medicine->countOf($packaging, $limit)." of {$medicine->name} left in stock.",
+                    default => 'You can buy up to '.$medicine->countOf($packaging, $limit)." of {$medicine->name} per visit.",
+                },
             ]);
         }
 
-        $this->session->put(self::KEY.'.'.$medicine->id, $quantity);
+        $this->session->put(self::KEY.".{$medicine->id}.{$packaging->value}", $quantity);
     }
 
-    public function remove(Medicine $medicine): void
+    /**
+     * The most pieces or boxes of this medicine the customer may have: what
+     * the shelf can still supply, or less if a per-item limit is set.
+     */
+    public function maxQuantity(Medicine $medicine, Packaging $packaging): int
     {
-        $this->session->forget(self::KEY.'.'.$medicine->id);
+        $onShelf = $this->onShelfFor($medicine, $packaging);
+        $perItemLimit = config('kiosk.max_quantity_per_item');
+
+        return $perItemLimit === null ? $onShelf : min($onShelf, (int) $perItemLimit);
+    }
+
+    /**
+     * Remove one packaging of a medicine, or the medicine altogether.
+     */
+    public function remove(Medicine $medicine, ?Packaging $packaging = null): void
+    {
+        if ($packaging === null) {
+            $this->session->forget(self::KEY.".{$medicine->id}");
+
+            return;
+        }
+
+        $this->session->forget(self::KEY.".{$medicine->id}.{$packaging->value}");
+
+        if (empty($this->session->get(self::KEY.".{$medicine->id}"))) {
+            $this->session->forget(self::KEY.".{$medicine->id}");
+        }
     }
 
     /**
@@ -115,9 +185,10 @@ class Cart
     }
 
     /**
-     * The basket's lines, sorted by name, with what each one costs.
+     * The basket's lines, sorted by name (pieces before boxes), with what each
+     * one costs.
      *
-     * @return Collection<int, array{medicine: Medicine, quantity: int, line_total: float, max_quantity: int}>
+     * @return Collection<int, array{medicine: Medicine, packaging: Packaging, quantity: int, unit_price: string, line_total: float, max_quantity: int}>
      */
     public function lines(): Collection
     {
@@ -125,23 +196,42 @@ class Cart
 
         return $this->medicines()
             ->sortBy('name')
-            ->map(fn (Medicine $medicine) => [
-                'medicine' => $medicine,
-                'quantity' => $quantities[$medicine->id],
-                'line_total' => round($medicine->price * $quantities[$medicine->id], 2),
-                'max_quantity' => min($medicine->stock, config('kiosk.max_quantity_per_item')),
-            ])
-            ->values()
-            ->toBase();
+            ->toBase()
+            ->flatMap(fn (Medicine $medicine) => collect(Packaging::cases())
+                ->filter(fn (Packaging $packaging) => isset($quantities[$medicine->id][$packaging->value]))
+                ->map(fn (Packaging $packaging) => [
+                    'medicine' => $medicine,
+                    'packaging' => $packaging,
+                    'quantity' => $quantities[$medicine->id][$packaging->value],
+                    'unit_price' => $medicine->priceOf($packaging),
+                    'line_total' => round($medicine->priceOf($packaging) * $quantities[$medicine->id][$packaging->value], 2),
+                    'max_quantity' => $this->maxQuantity($medicine, $packaging),
+                ]))
+            ->values();
     }
 
+    /**
+     * How many pieces and boxes are in the basket.
+     */
     public function count(): int
     {
-        return array_sum($this->quantities());
+        return collect($this->quantities())->flatten()->sum();
     }
 
     public function total(): float
     {
         return round($this->lines()->sum('line_total'), 2);
+    }
+
+    /**
+     * How many of this packaging the shelf can still supply, after the
+     * basket's other packaging of the same medicine.
+     */
+    private function onShelfFor(Medicine $medicine, Packaging $packaging): int
+    {
+        $piecesPer = $medicine->piecesPer($packaging);
+        $heldByOtherPackaging = $this->piecesOf($medicine) - $this->quantityOf($medicine, $packaging) * $piecesPer;
+
+        return max(0, intdiv($medicine->stock - $heldByOtherPackaging, $piecesPer));
     }
 }

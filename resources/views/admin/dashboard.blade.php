@@ -1,6 +1,6 @@
 <x-layouts.kiosk title="Staff" noindex>
     <header class="flex items-center gap-4 border-b-2 border-line bg-surface px-6 py-4">
-        <x-logo-mark class="size-12 rounded-xl bg-ink text-white" />
+        <x-logo-mark class="size-12 rounded-xl bg-brand text-white" />
         <div class="min-w-0 flex-1">
             <p class="font-display text-xl font-bold">{{ config('kiosk.name') }} · Staff</p>
             <p class="text-ink-muted">Signed in as {{ auth('admin')->user()->name }} · {{ $kioskOrdersToday }} kiosk {{ Str::plural('order', $kioskOrdersToday) }} today</p>
@@ -41,7 +41,7 @@
                                     @endif
                                 </p>
                                 <p class="mt-1 text-ink-muted">
-                                    {{ $order->items->map(fn ($item) => "{$item->quantity} × {$item->name}")->join(', ') }}
+                                    {{ $order->items->map->summary()->join(', ') }}
                                 </p>
                             </div>
 
@@ -88,7 +88,7 @@
                             <span class="text-ink-muted">· {{ $medicine->drugLabel() }}</span>
                         </span>
                         @if ($medicine->isInStock())
-                            <span class="badge bg-rx-soft text-rx">{{ $medicine->stock }} left</span>
+                            <span class="badge bg-rx-soft text-rx">{{ $medicine->countOf(\App\Enums\Packaging::Piece, $medicine->stock) }} left</span>
                         @else
                             <span class="badge bg-danger-soft text-danger">Out of stock</span>
                         @endif

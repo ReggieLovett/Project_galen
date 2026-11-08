@@ -2,6 +2,7 @@
 
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
+use App\Enums\Packaging;
 use App\Models\Admin;
 use App\Models\Order;
 use App\Models\User;
@@ -25,9 +26,9 @@ function actingAsStaff(): TestCase
 }
 
 /**
- * A kiosk order as checkout leaves it: awaiting payment, stock reserved.
+ * A kiosk order as checkout leaves it: awaiting payment, pieces reserved.
  *
- * @param  array<string, int>  $lines  medicine name => quantity
+ * @param  array<string, array{Packaging, int}>  $lines  medicine name => [packaging, quantity]
  */
 function kioskOrder(array $lines, ?User $customer = null): Order
 {
@@ -36,44 +37,47 @@ function kioskOrder(array $lines, ?User $customer = null): Order
         'user_id' => $customer?->id,
         'channel' => OrderChannel::Kiosk,
         'status' => OrderStatus::AwaitingPayment,
-        'item_count' => array_sum($lines),
+        'item_count' => collect($lines)->sum(fn (array $line) => $line[1]),
         'total' => 0,
     ]);
 
-    foreach ($lines as $name => $quantity) {
+    foreach ($lines as $name => [$packaging, $quantity]) {
         $medicine = medicine($name);
+        $pieces = $quantity * $medicine->piecesPer($packaging);
 
         $order->items()->create([
             'medicine_id' => $medicine->id,
             'name' => $medicine->name,
             'brand' => $medicine->brand,
             'strength' => $medicine->strength,
-            'unit_price' => $medicine->price,
+            'packaging' => $packaging,
+            'unit_price' => $medicine->priceOf($packaging),
             'quantity' => $quantity,
-            'line_total' => $medicine->price * $quantity,
+            'piece_count' => $pieces,
+            'line_total' => $medicine->priceOf($packaging) * $quantity,
         ]);
 
-        $medicine->decrement('stock', $quantity);
+        $medicine->decrement('stock', $pieces);
     }
 
     return $order;
 }
 
 test('the dashboard lists what to fetch for each order', function () {
-    $order = kioskOrder(['Amoxil' => 1, 'Tums Extra Strength' => 2]);
+    $order = kioskOrder(['Amoxil' => [Packaging::Box, 1], 'Biogesic' => [Packaging::Piece, 11]]);
 
     actingAsStaff()
         ->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee($order->order_number)
-        ->assertSee('1 × Amoxil, 2 × Tums Extra Strength')
+        ->assertSee('1 box of Amoxil, 11 tablets of Biogesic')
         ->assertSee('Prescription · pharmacist check')
         ->assertSee('Mark paid');
 });
 
 test('marking an order paid turns it into purchase history', function () {
     $maria = User::where('member_number', '100245')->firstOrFail();
-    $order = kioskOrder(['Amoxil' => 1], $maria);
+    $order = kioskOrder(['Amoxil' => [Packaging::Box, 1]], $maria);
 
     // Unpaid, it doesn't count yet.
     expect($maria->hasPurchasedBefore(medicine('Amoxil')))->toBeFalse();
@@ -89,25 +93,25 @@ test('marking an order paid turns it into purchase history', function () {
         ->and($order->completed_at)->not->toBeNull()
         ->and($maria->hasPurchasedBefore(medicine('Amoxil')))->toBeTrue()
         // Paying doesn't touch stock: checkout already took it off the shelf.
-        ->and(medicine('Amoxil')->stock)->toBe(24);
+        ->and(medicine('Amoxil')->stock)->toBe(200);
 });
 
 test('cancelling an order puts the stock back', function () {
-    $order = kioskOrder(['Motrin IB' => 3, 'Aleve All Day Strong' => 4]);
+    $order = kioskOrder(['Biogesic' => [Packaging::Box, 2], 'Medicol Advance' => [Packaging::Piece, 40]]);
 
-    expect(medicine('Motrin IB')->stock)->toBe(15);
+    expect(medicine('Biogesic')->stock)->toBe(1300);
 
     actingAsStaff()
         ->patch(route('admin.orders.cancel', $order))
         ->assertSessionHas('success');
 
     expect($order->refresh()->status)->toBe(OrderStatus::Cancelled)
-        ->and(medicine('Motrin IB')->stock)->toBe(18)
-        ->and(medicine('Aleve All Day Strong')->stock)->toBe(4);
+        ->and(medicine('Biogesic')->stock)->toBe(1500) // two boxes are 200 tablets
+        ->and(medicine('Medicol Advance')->stock)->toBe(40);
 });
 
 test('an order can only be handled once', function () {
-    $order = kioskOrder(['Motrin IB' => 1]);
+    $order = kioskOrder(['Biogesic' => [Packaging::Piece, 1]]);
 
     actingAsStaff()->patch(route('admin.orders.cancel', $order));
 
@@ -118,7 +122,7 @@ test('an order can only be handled once', function () {
         ->assertSessionHas('error');
 
     expect($order->refresh()->status)->toBe(OrderStatus::Cancelled)
-        ->and(medicine('Motrin IB')->stock)->toBe(18); // restored once, not twice
+        ->and(medicine('Biogesic')->stock)->toBe(1500); // restored once, not twice
 });
 
 test('past counter sales cannot be cancelled', function () {
@@ -132,7 +136,7 @@ test('past counter sales cannot be cancelled', function () {
 });
 
 test('only staff can handle orders', function () {
-    $order = kioskOrder(['Motrin IB' => 1]);
+    $order = kioskOrder(['Biogesic' => [Packaging::Piece, 1]]);
 
     $this->patch(route('admin.orders.complete', $order))->assertRedirect(route('admin.login'));
 

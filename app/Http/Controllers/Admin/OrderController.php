@@ -48,7 +48,7 @@ class OrderController extends Controller
             }
 
             foreach ($order->items as $item) {
-                Medicine::whereKey($item->medicine_id)->increment('stock', $item->quantity);
+                Medicine::whereKey($item->medicine_id)->increment('stock', $item->piece_count);
             }
 
             return true;

@@ -1,2 +1,3 @@
-{{-- A price in the kiosk's currency: <x-money :amount="$medicine->price" /> → $8.49 --}}
-@props(['amount'])<span {{ $attributes->class('tabular-nums') }}>{{ \Illuminate\Support\Number::currency((float) $amount, in: config('kiosk.currency')) }}</span>
+{{-- A price in the kiosk's currency: <x-money :amount="$medicine->piece_price" /> → ₱5.00 --}}
+@props(['amount'])
+<span {{ $attributes->class('tabular-nums') }}>{{ \App\Support\Money::format($amount) }}</span>

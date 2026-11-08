@@ -17,8 +17,8 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained()->restrictOnDelete();
             $table->string('name');
             $table->string('brand');
-            // One canonical name per molecule ("Acetaminophen", never also
-            // "Paracetamol") so alternatives can be matched exactly.
+            // One canonical name per molecule ("Paracetamol", never also
+            // "Acetaminophen") so alternatives can be matched exactly.
             $table->string('active_ingredient')->index();
             $table->string('strength');
             $table->string('dosage_form');

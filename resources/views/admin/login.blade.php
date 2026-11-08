@@ -1,7 +1,7 @@
 <x-layouts.kiosk title="Staff login" noindex class="flex items-center justify-center px-5 py-10 [.keyboard-open_&]:items-start [.keyboard-open_&]:pb-[29rem]">
     <div class="w-full">
         <p class="mb-6 flex items-center justify-center gap-3">
-            <x-logo-mark class="size-12 rounded-xl bg-ink text-white" />
+            <x-logo-mark class="size-12 rounded-xl bg-brand text-white" />
             <span class="font-display text-xl font-bold">{{ config('kiosk.name') }}</span>
         </p>
         <x-auth-card heading="Staff login">
