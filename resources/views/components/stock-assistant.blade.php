@@ -44,8 +44,9 @@
             <button type="button" x-on:click="panel = null" class="btn-icon border-white/40 bg-white/10 text-white hover:bg-white/20" aria-label="Close assistant" autofocus><x-icon name="x" /></button>
         </header>
 
-        {{-- The chat. New replies are read out by screen readers. --}}
-        <div x-init="$nextTick(() => $el.scrollTop = $el.scrollHeight)" class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5" role="log" aria-live="polite" aria-labelledby="assistant-title">
+        {{-- The chat. New replies are read out by screen readers. A swapped region, so its
+             medicine cards show what is in the basket after one is added from here. --}}
+        <div data-kiosk-region="assistant-log" data-keep-scroll="assistant-log" x-init="$nextTick(() => $el.scrollTop = $el.scrollHeight)" class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5" role="log" aria-live="polite" aria-labelledby="assistant-title">
             <div class="flex gap-3 rounded-2xl bg-sunken p-4 text-lg leading-snug">
                 <x-icon name="info" class="mt-0.5 text-assist" />
                 <p>Ask me about any medicine on our shelves: another brand with <strong>the same active ingredient</strong>, whether the dose is the same, which is cheaper, or what it is for. I can't tell you what to take or how much. Our pharmacist can.</p>

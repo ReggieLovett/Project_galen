@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Medicine;
-use App\Models\User;
 use App\Services\Assistant\Conversation;
 use App\Services\Cart;
 use App\Support\KioskSession;
@@ -61,8 +60,6 @@ class KioskController extends Controller
             'basketTotal' => $cart->total(),
             'basketCount' => $cart->count(),
             'conversation' => $conversation->entries(),
-            // Demo only: stands in for tapping a physical loyalty card.
-            'demoMembers' => User::whereNotNull('member_number')->orderBy('name')->get(),
         ]);
     }
 

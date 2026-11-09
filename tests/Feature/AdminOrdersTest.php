@@ -76,7 +76,7 @@ test('the dashboard lists what to fetch for each order', function () {
 });
 
 test('marking an order paid turns it into purchase history', function () {
-    $maria = User::where('member_number', '100245')->firstOrFail();
+    $maria = User::where('member_number', '12345678')->firstOrFail();
     $order = kioskOrder(['Amoxil' => [Packaging::Box, 1]], $maria);
 
     // Unpaid, it doesn't count yet.
@@ -141,7 +141,7 @@ test('only staff can handle orders', function () {
     $this->patch(route('admin.orders.complete', $order))->assertRedirect(route('admin.login'));
 
     // A signed-in member is not staff.
-    $this->post(route('member.store'), ['member_number' => '100245']);
+    $this->post(route('member.store'), ['member_number' => '12345678']);
     $this->patch(route('admin.orders.cancel', $order))->assertRedirect(route('admin.login'));
 
     expect($order->refresh()->status)->toBe(OrderStatus::AwaitingPayment);

@@ -10,8 +10,8 @@
 @endphp
 
 <x-layouts.kiosk title="Shop" class="overflow-hidden">
-{{-- panel: which drawer is open --}}
-<div x-data="{ panel: @js($openPanel) }" x-on:keydown.escape.window="panel = null" class="flex h-dvh flex-col">
+{{-- panel: which drawer is open. refillFor: the prescription medicine to go back to after a member signs in. --}}
+<div x-data="{ panel: @js($openPanel), refillFor: @js($rx['medicine_id'] ?? null) }" x-on:keydown.escape.window="panel = null" class="flex h-dvh flex-col">
 
     {{-- ================= Top bar ================= --}}
     <header class="flex flex-wrap items-center gap-3 border-b-4 border-brand-deep bg-brand px-4 py-3 text-white sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4">
@@ -78,7 +78,7 @@
                 </form>
             </div>
         @else
-            <button type="button" x-on:click="panel = 'member'" class="btn shrink-0 border-2 border-white/40 bg-white/10 px-4 text-white hover:bg-white/20 xl:px-5" aria-label="Member sign in">
+            <button type="button" x-on:click="refillFor = null; panel = 'member'" class="btn shrink-0 border-2 border-white/40 bg-white/10 px-4 text-white hover:bg-white/20 xl:px-5" aria-label="Member sign in">
                 <x-icon name="card" />
                 <span class="hidden xl:inline">Member sign in</span>
             </button>
@@ -115,7 +115,7 @@
 
             {{-- relative: keeps screen-reader-only text inside this scroller, so it can't make the whole page scroll.
                  Scrolling tells the cards, so an open "What is it for?" closes again. --}}
-            <div data-catalogue x-on:scroll.passive="$dispatch('catalogue-scroll', $el.scrollTop)" class="relative min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+            <div data-catalogue data-keep-scroll="catalogue" x-on:scroll.passive="$dispatch('catalogue-scroll', $el.scrollTop)" class="relative min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
                 {{-- Help is one tap away --}}
                 <button type="button" x-on:click="panel = 'assistant'" class="focus-ring mb-5 flex w-full items-center gap-4 rounded-2xl border-2 border-assist/15 bg-assist-soft p-4 text-left transition-colors duration-150 hover:border-assist/40">
                     <span class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-assist text-white"><x-icon name="sparkles" /></span>
@@ -147,7 +147,8 @@
                     </div>
                 </div>
 
-                <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Medicines">
+                {{-- Columns follow the space the basket leaves, not the screen width, so cards never get too narrow for their buttons. --}}
+                <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4" aria-label="Medicines">
                     @forelse ($medicines as $medicine)
                         <x-medicine-card :medicine="$medicine" :in-basket="$basketQuantities[$medicine->id] ?? []" />
                     @empty
@@ -265,8 +266,8 @@
     {{-- Basket bar below lg --}}
     <div data-kiosk-region="basket-bar" class="flex items-center gap-4 border-t-2 border-line bg-surface px-4 py-3 lg:hidden">
         <div class="min-w-0 flex-1">
-            <p class="font-display text-lg font-bold">{{ $basketCount }} {{ Str::plural('item', $basketCount) }} · <x-money :amount="$basketTotal" /></p>
-            <p class="text-sm text-ink-muted">Pay at the counter</p>
+            <p class="font-display text-xl font-extrabold tabular-nums"><x-money :amount="$basketTotal" /></p>
+            <p class="text-sm text-ink-muted">{{ $basketCount }} {{ Str::plural('item', $basketCount) }} · Pay at the counter</p>
         </div>
         <button type="button" x-on:click="panel = 'basket'" class="btn btn-primary"><x-icon name="basket" />View basket</button>
     </div>
@@ -274,7 +275,9 @@
     {{-- ================= Stock assistant (AI) ================= --}}
     <x-stock-assistant :conversation="$conversation" :out-of-stock="$outOfStock" :basket-quantities="$basketQuantities" />
 
-    {{-- ================= Member sign in (mock card tap) ================= --}}
+    {{-- ================= Member sign in =================
+         Members type the number on their loyalty card (a real kiosk would read the card).
+         Anyone without one, or who changes their mind, goes back to shopping as a non-member. --}}
     <div x-show="panel === 'member'" x-cloak x-trap.noscroll="panel === 'member'" class="pointer-events-none fixed inset-0 z-[60] flex items-start justify-center p-5 pt-10 sm:items-center sm:pt-5" role="dialog" aria-modal="true" aria-labelledby="member-title">
         <div x-on:click="panel = null" class="pointer-events-auto absolute inset-0 bg-ink/60"></div>
         <div class="pointer-events-auto relative w-full max-w-lg rounded-2xl bg-surface p-8">
@@ -286,29 +289,10 @@
                 <button type="button" x-on:click="panel = null" class="btn-icon" aria-label="Close" autofocus><x-icon name="x" /></button>
             </div>
 
-            <p class="mt-6 font-display text-lg font-semibold">Tap a demo card</p>
-            <div class="mt-2 grid gap-3">
-                @foreach ($demoMembers as $member)
-                    <form method="POST" action="{{ route('member.store') }}">
-                        @csrf
-                        <input type="hidden" name="member_number" value="{{ $member->member_number }}">
-                        @if ($rx) <input type="hidden" name="add" value="{{ $rx['medicine_id'] }}"> @endif
-                        <button type="submit" class="focus-ring flex min-h-16 w-full items-center gap-4 rounded-xl bg-brand px-5 text-left text-white transition-[background-color,transform] duration-150 hover:bg-brand-hover active:scale-[0.98]">
-                            <x-icon name="card" :size="28" />
-                            <span class="flex-1">
-                                <span class="block font-display text-lg font-bold">{{ $member->name }}</span>
-                                <span class="block font-mono tracking-widest">•••• {{ substr($member->member_number, -4) }}</span>
-                            </span>
-                            <x-icon name="arrow-right" />
-                        </button>
-                    </form>
-                @endforeach
-            </div>
-
             <form method="POST" action="{{ route('member.store') }}" class="mt-6">
                 @csrf
-                @if ($rx) <input type="hidden" name="add" value="{{ $rx['medicine_id'] }}"> @endif
-                <label for="member-number" class="font-display text-lg font-semibold">Or enter your member number</label>
+                <input type="hidden" name="add" x-bind:value="refillFor ?? ''">
+                <label for="member-number" class="font-display text-lg font-semibold">Member card number</label>
                 <div class="mt-2 flex gap-2">
                     <input
                         id="member-number"
@@ -329,6 +313,12 @@
                     <p id="member-error" class="mt-2 font-semibold text-danger">{{ $message }}</p>
                 @enderror
             </form>
+
+            <div class="mt-6 border-t-2 border-line pt-6">
+                <p class="font-display text-lg font-semibold">Not a member?</p>
+                <p class="mt-1 text-ink-muted">You can keep shopping without a card. For prescription medicines, the pharmacist can help at the counter.</p>
+                <button type="button" x-on:click="refillFor = null; panel = null" class="btn btn-quiet mt-4 w-full">Continue without a card</button>
+            </div>
         </div>
     </div>
 
@@ -372,7 +362,9 @@
         </div>
     </div>
 
-    {{-- ================= Prescription required (flashed by BasketController) ================= --}}
+    {{-- ================= Prescription required (flashed by BasketController) =================
+         A swapped region, so the popup also appears after a basket form sent by app.js. --}}
+    <div data-kiosk-region="prescription-notice">
     @if ($rx)
         <div x-data="{ open: true }" x-show="open" x-trap.noscroll="open" class="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-5" role="alertdialog" aria-modal="true" aria-labelledby="rx-message" aria-describedby="rx-medicine">
             <div x-on:click="open = false" class="pointer-events-auto absolute inset-0 bg-ink/60"></div>
@@ -388,12 +380,13 @@
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row-reverse">
                     <button type="button" x-on:click="open = false" class="btn btn-primary flex-1" autofocus>OK</button>
                     @guest
-                        <button type="button" x-on:click="open = false; panel = 'member'" class="btn btn-quiet flex-1"><x-icon name="card" />Member sign in</button>
+                        <button type="button" x-on:click="open = false; refillFor = @js($rx['medicine_id']); panel = 'member'" class="btn btn-quiet flex-1"><x-icon name="card" />Member sign in</button>
                     @endguest
                 </div>
             </div>
         </div>
     @endif
+    </div>
 
     {{-- ================= Still there? ================= --}}
     <x-idle-timer>
@@ -403,20 +396,25 @@
     {{-- ================= On-screen keyboard ================= --}}
     <x-on-screen-keyboard />
 
-    {{-- ================= Flash messages (like the notes app's x-alert) ================= --}}
+    {{-- ================= Flash messages (like the notes app's x-alert) =================
+         The status box stays put so screen readers announce what changes inside it;
+         the swapped region inside it carries the messages from a basket form. Longer
+         messages stay up longer, so there is time to read them. --}}
     <div class="pointer-events-none fixed inset-x-0 bottom-24 z-[90] flex justify-center px-4 lg:bottom-8" role="status">
-        @session('success')
-            <p x-data="{ show: true }" x-init="setTimeout(() => show = false, 3500)" x-show="show" x-transition.opacity.duration.200ms
-               class="flex max-w-xl items-center gap-3 rounded-2xl bg-ink px-5 py-4 text-lg font-semibold text-white shadow-lg">
-                <x-icon name="check" />{{ $value }}
-            </p>
-        @endsession
-        @if ($errors->any() && ! $errors->hasAny(['member_number', 'question']))
-            <p x-data="{ show: true }" x-init="setTimeout(() => show = false, 6000)" x-show="show" x-transition.opacity.duration.200ms
-               class="flex max-w-xl items-center gap-3 rounded-2xl bg-danger px-5 py-4 text-lg font-semibold text-white shadow-lg">
-                <x-icon name="info" />{{ $errors->first() }}
-            </p>
-        @endif
+        <div data-kiosk-region="toasts" class="contents">
+            @session('success')
+                <p x-data="{ show: true }" x-init="setTimeout(() => show = false, {{ max(3500, mb_strlen($value) * 70) }})" x-show="show" x-transition.opacity.duration.200ms
+                   class="flex max-w-xl items-center gap-3 rounded-2xl bg-ink px-5 py-4 text-lg font-semibold text-pretty text-white shadow-lg">
+                    <x-icon name="check" />{{ $value }}
+                </p>
+            @endsession
+            @if ($errors->any() && ! $errors->hasAny(['member_number', 'question']))
+                <p x-data="{ show: true }" x-init="setTimeout(() => show = false, 6000)" x-show="show" x-transition.opacity.duration.200ms
+                   class="flex max-w-xl items-center gap-3 rounded-2xl bg-danger px-5 py-4 text-lg font-semibold text-pretty text-white shadow-lg">
+                    <x-icon name="info" />{{ $errors->first() }}
+                </p>
+            @endif
+        </div>
     </div>
 </div>
 </x-layouts.kiosk>

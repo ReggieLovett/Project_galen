@@ -20,7 +20,7 @@
     x-on:catalogue-scroll.window="scrolled($event.detail)"
     x-on:details-opened.window="$event.detail !== key && (open = false)"
     {{ $attributes->class([
-        'flex scroll-mt-4 flex-col overflow-hidden rounded-2xl border-2 bg-surface transition-[border-color,box-shadow] duration-200',
+        '@container flex scroll-mt-4 flex-col overflow-hidden rounded-2xl border-2 bg-surface transition-[border-color,box-shadow] duration-200',
         'border-brand shadow-[0_10px_30px_-18px_rgb(215_25_32/0.6)]' => $inBasket,
         'border-line' => ! $inBasket,
         'border-dashed' => ! $medicine->isInStock(),
@@ -30,7 +30,7 @@
         <div class="flex items-start gap-4 p-4">
             <x-medicine-picture :medicine="$medicine" x-on:click="toggle()" class="size-20 shrink-0 cursor-pointer rounded-xl" />
             <div class="min-w-0 flex-1">
-                <h3 class="text-lg leading-snug font-bold text-pretty">{{ $medicine->fullName() }}</h3>
+                <h3 id="name-{{ $key }}" class="text-lg leading-snug font-bold text-pretty">{{ $medicine->fullName() }}</h3>
                 <p class="font-semibold">{{ $medicine->drugLabel() }}</p>
                 @unless ($canCount)
                     <p class="text-ink-muted"><x-money :amount="$medicine->piece_price" /> a {{ $medicine->pieceName(1) }} · <x-money :amount="$medicine->box_price" /> a box</p>
@@ -64,7 +64,7 @@
 
     <div @class(['flex flex-1 flex-col', 'px-4 pb-4' => $compact, 'p-5 pt-4' => ! $compact])>
         @unless ($compact)
-            <h3 class="text-xl leading-snug font-bold text-pretty">{{ $medicine->fullName() }}</h3>
+            <h3 id="name-{{ $key }}" class="text-xl leading-snug font-bold text-pretty">{{ $medicine->fullName() }}</h3>
             <p class="mt-0.5 text-lg leading-snug font-semibold">{{ $medicine->drugLabel() }}</p>
             <p class="mt-0.5 text-ink-muted">{{ $medicine->dosage_form }} · box of {{ $medicine->piecesPerBox() }}</p>
         @endunless
@@ -111,17 +111,40 @@
             <form method="POST" action="{{ route('assistant.store') }}" class="mt-4">
                 @csrf
                 <input type="hidden" name="medicine_id" value="{{ $medicine->id }}">
-                <button type="submit" class="btn btn-assist w-full"><x-icon name="sparkles" />Find alternatives</button>
+                <button type="submit" class="btn btn-assist w-full @max-[18rem]:px-3" aria-describedby="name-{{ $key }}"><x-icon name="sparkles" />Find alternatives</button>
             </form>
         @elseif ($canCount)
-            <x-packaging-chooser :medicine="$medicine" :panel="$panel" :in-basket="$inBasket" @class(['mt-auto pt-4' => ! $compact, 'mt-3' => $compact]) />
+            @if ($medicine->requiresPrescription())
+                <p @class(['flex items-center gap-1.5 font-semibold text-rx', 'mt-auto pt-4' => ! $compact, 'mt-3' => $compact])>
+                    <x-icon name="shield-check" :size="18" />Prescription on file
+                </p>
+            @endif
+            <x-packaging-chooser :medicine="$medicine" :panel="$panel" :in-basket="$inBasket" @class([
+                'mt-auto pt-4' => ! $compact && ! $medicine->requiresPrescription(),
+                'pt-2' => ! $compact && $medicine->requiresPrescription(),
+                'mt-3' => $compact && ! $medicine->requiresPrescription(),
+                'mt-2' => $compact && $medicine->requiresPrescription(),
+            ]) />
         @else
-            {{-- Needs a prescription on file: the controller answers with the "Prescription required" popup. --}}
-            <form method="POST" action="{{ route('basket.store', $medicine) }}" class="{{ $compact ? 'mt-3' : 'mt-4' }}">
-                @csrf
-                @if ($panel) <input type="hidden" name="panel" value="{{ $panel }}"> @endif
-                <button type="submit" class="btn btn-primary w-full"><x-icon name="plus" />Add to basket</button>
-            </form>
+            {{-- A prescription medicine this customer can't add here. Say why before they
+                 tap anything, and offer the one thing that can change it: a member card
+                 with this drug in its purchase history (MedicinePolicy). --}}
+            <div @class(['flex gap-2.5 rounded-xl bg-rx-soft p-3 text-rx', 'mt-4' => ! $compact, 'mt-3' => $compact])>
+                <x-icon name="shield-alert" :size="22" />
+                <div class="leading-snug">
+                    <p class="font-display text-lg font-bold">Prescription required</p>
+                    @auth
+                        <p class="mt-0.5">We have no record of you buying this before. Please ask the pharmacist at the counter.</p>
+                    @else
+                        <p class="mt-0.5">Filled it with us before? Sign in with your member card to add a refill. If not, please ask the pharmacist at the counter.</p>
+                    @endauth
+                </div>
+            </div>
+            @guest
+                <button type="button" x-on:click="refillFor = {{ $medicine->id }}; panel = 'member'" class="btn btn-quiet mt-3 w-full @max-[18rem]:px-3" aria-describedby="name-{{ $key }}">
+                    <x-icon name="card" />Sign in to add a refill
+                </button>
+            @endguest
         @endif
     </div>
 </li>

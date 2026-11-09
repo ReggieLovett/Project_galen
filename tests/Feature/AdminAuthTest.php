@@ -47,7 +47,7 @@ test('the dashboard requires a staff login', function () {
 });
 
 test('a member card does not open the staff area', function () {
-    $this->post(route('member.store'), ['member_number' => '100245'])->assertRedirect();
+    $this->post(route('member.store'), ['member_number' => '12345678'])->assertRedirect();
 
     $this->get(route('admin.dashboard'))->assertRedirect(route('admin.login'));
 });

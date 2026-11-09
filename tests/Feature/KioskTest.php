@@ -178,7 +178,7 @@ test('a guest is sent to the counter for prescription medicine', function () {
 });
 
 test('a member can refill a prescription they have bought before', function () {
-    signInAs('100245')->assertSessionHas('success', 'Welcome back, Maria.');
+    signInAs('12345678')->assertSessionHas('success', 'Welcome back, Maria.');
 
     addToBasket('Glucophage', Packaging::Box)->assertSessionHas('success', 'Prescription on file. 1 box of Glucophage added.');
 
@@ -189,7 +189,7 @@ test('a member can refill a prescription they have bought before', function () {
 });
 
 test('a member cannot add a prescription they have never bought', function () {
-    signInAs('100245');
+    signInAs('12345678');
 
     addToBasket('Amoxil')->assertSessionHas('prescription_required.name', 'Amoxil');
     addToBasket('RiteMed Co-Amoxiclav')->assertSessionHas('prescription_required');
@@ -200,26 +200,66 @@ test('a member cannot add a prescription they have never bought', function () {
 test('product matching mode requires the exact product', function () {
     config(['kiosk.prescription_match' => 'product']);
 
-    signInAs('100245');
+    signInAs('12345678');
 
     addToBasket('Glucophage')->assertSessionHas('success');
     addToBasket('RiteMed Atorvastatin')->assertSessionHas('prescription_required');
 });
 
 test('one member\'s history does not unlock another member\'s prescriptions', function () {
-    signInAs('100318');
+    // Maria (12345678) has filled Glucophage. This member never has.
+    User::factory()->create(['member_number' => '87654321']);
 
-    addToBasket('Cozaar')->assertSessionHas('success');
+    signInAs('87654321');
+
     addToBasket('Glucophage')->assertSessionHas('prescription_required');
+    addToBasket('Biogesic')->assertSessionHas('success');
+});
+
+test('the member sign in lists no members and lets a non-member carry on', function () {
+    $this->get(route('kiosk'))
+        ->assertOk()
+        ->assertSeeText('Member card number')
+        ->assertSeeText('Not a member?')
+        ->assertSeeText('Continue without a card')
+        ->assertDontSeeText('Maria Santos')
+        ->assertDontSee('12345678');
 });
 
 test('signing in from the prescription popup returns to that medicine', function () {
     $glucophage = medicine('Glucophage');
 
     $this->from(route('kiosk', ['q' => 'gluco']))
-        ->post(route('member.store'), ['member_number' => '100245', 'add' => $glucophage->id])
+        ->post(route('member.store'), ['member_number' => '12345678', 'add' => $glucophage->id])
         ->assertRedirect(route('kiosk', ['q' => 'gluco']).'#medicine-'.$glucophage->id)
-        ->assertSessionHas('success', 'Welcome back, Maria. Tap Add to basket on Glucophage again.');
+        ->assertSessionHas('success', 'Welcome back, Maria. Your prescription for Glucophage is on file. Choose how many you want.');
+});
+
+test('signing in for a prescription the member has never bought says why it still cannot be added', function () {
+    $this->from(route('kiosk'))
+        ->post(route('member.store'), ['member_number' => '12345678', 'add' => medicine('Amoxil')->id])
+        ->assertSessionHas('success', 'Welcome back, Maria. We have no record of you buying Amoxil before. Please ask the pharmacist at the counter.');
+});
+
+test('a prescription card explains why a guest cannot add it and offers a member sign in', function () {
+    $this->get(route('kiosk', ['q' => 'glucophage']))
+        ->assertOk()
+        ->assertSeeText('Prescription required')
+        ->assertSeeText('Filled it with us before? Sign in with your member card to add a refill.')
+        ->assertSeeText('Sign in to add a refill')
+        ->assertDontSee('Prescription on file');
+});
+
+test('a prescription card tells a member when it is not in their purchase history', function () {
+    signInAs('12345678');
+
+    $this->get(route('kiosk', ['q' => 'amoxil']))
+        ->assertSeeText('We have no record of you buying this before')
+        ->assertDontSeeText('Sign in to add a refill');
+
+    $this->get(route('kiosk', ['q' => 'glucophage']))
+        ->assertSeeText('Prescription on file')
+        ->assertDontSeeText('Prescription required');
 });
 
 test('an unknown member card is rejected', function () {
@@ -231,7 +271,7 @@ test('an unknown member card is rejected', function () {
 });
 
 test('signing out removes prescription refills from the basket', function () {
-    signInAs('100245');
+    signInAs('12345678');
     addToBasket('Glucophage', Packaging::Box);
     addToBasket('Glucophage', Packaging::Piece, 5);
     addToBasket('Kremil-S');
@@ -305,7 +345,7 @@ test('basket quantities can be changed and items removed', function () {
 });
 
 test('checkout creates an order and resets the kiosk', function () {
-    signInAs('100245');
+    signInAs('12345678');
     addToBasket('Glucophage', Packaging::Box, 2);
     addToBasket('Biogesic', Packaging::Piece, 11);
     addToBasket('Biogesic', Packaging::Box);
@@ -362,7 +402,7 @@ test('checkout rechecks prescriptions', function () {
         ->assertRedirect(route('kiosk'))
         ->assertSessionHasErrors(['basket' => 'Amoxil needs a prescription on file. Please remove it or ask at the counter.']);
 
-    $this->assertDatabaseCount('orders', 4);
+    $this->assertDatabaseCount('orders', 3);
 });
 
 test('checkout rechecks stock across pieces and boxes', function () {
@@ -375,7 +415,7 @@ test('checkout rechecks stock across pieces and boxes', function () {
     $this->from(route('kiosk'))->post(route('checkout.store'))
         ->assertSessionHasErrors(['basket' => 'Sorry, only 10 tablets of Biogesic left. Please update your basket.']);
 
-    $this->assertDatabaseCount('orders', 4);
+    $this->assertDatabaseCount('orders', 3);
     expect(medicine('Biogesic')->stock)->toBe(10);
 });
 
@@ -386,7 +426,7 @@ test('checkout needs a basket', function () {
 });
 
 test('reset signs out and empties the basket', function () {
-    signInAs('100245');
+    signInAs('12345678');
     addToBasket('Glucophage');
 
     $this->post(route('kiosk.reset'))->assertRedirect(route('welcome'));
@@ -400,7 +440,7 @@ test('too many card tries show a message, not an error page', function () {
         signInAs('99999'.$attempt);
     }
 
-    signInAs('100245')
+    signInAs('12345678')
         ->assertRedirect(route('kiosk'))
         ->assertSessionHasErrors(['member_number' => 'Too many tries. Please wait a minute or ask at the counter.']);
 
@@ -416,9 +456,9 @@ test('checkout waits its turn when another kiosk is checking out', function () {
     $this->from(route('kiosk'))->post(route('checkout.store'))
         ->assertSessionHasErrors(['basket' => 'The till is busy. Please tap Place order again.']);
 
-    $this->assertDatabaseCount('orders', 4);
+    $this->assertDatabaseCount('orders', 3);
 });
 
 test('member numbers are unique', function () {
-    User::factory()->create(['member_number' => '100245']);
+    User::factory()->create(['member_number' => '12345678']);
 })->throws(UniqueConstraintViolationException::class);

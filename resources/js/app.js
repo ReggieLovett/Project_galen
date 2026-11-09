@@ -2,7 +2,11 @@ import Alpine from 'alpinejs';
 import focus from '@alpinejs/focus';
 
 // Every kiosk action is handled by a Laravel controller. Basket forms use
-// fetch so the catalogue and basket can be refreshed without navigating away.
+// fetch so the page can be refreshed without navigating away: each element
+// marked data-kiosk-region (catalogue, basket, toasts, the prescription
+// popup, the assistant's chat) is swapped for its copy in the response.
+// Anything the controller flashes must render inside one of them, or the
+// customer never sees it.
 document.addEventListener('submit', async (event) => {
     if (event.defaultPrevented || !(event.target instanceof HTMLFormElement)) return;
 
@@ -22,8 +26,8 @@ document.addEventListener('submit', async (event) => {
     form.dataset.submitting = 'true';
     buttons.forEach((button) => (button.disabled = true));
 
-    const catalogue = document.querySelector('[data-kiosk-region="catalogue"]');
-    const catalogueScrollTop = catalogue?.querySelector('[data-catalogue]')?.scrollTop ?? 0;
+    // Scrolled lists keep their place across the swap.
+    const scrollTops = new Map([...document.querySelectorAll('[data-keep-scroll]')].map((element) => [element.dataset.keepScroll, element.scrollTop]));
 
     try {
         const response = await fetch(form.action, {
@@ -53,7 +57,10 @@ document.addEventListener('submit', async (event) => {
 
         history.replaceState(null, '', response.url);
 
-        document.querySelector('[data-catalogue]')?.scrollTo({ top: catalogueScrollTop });
+        // After Alpine's own $nextTick work (the chat scrolls itself to the end), before the next paint.
+        requestAnimationFrame(() => {
+            scrollTops.forEach((top, name) => document.querySelector(`[data-keep-scroll="${name}"]`)?.scrollTo({ top }));
+        });
     } catch (error) {
         console.error('Unable to update the basket without navigating.', error);
         window.location.reload();
@@ -152,15 +159,21 @@ Alpine.data('horizontalScroller', () => ({
     atEnd: false,
 
     init() {
+        const scroller = this.$refs.scroller;
+
         this.update = () => {
-            const scroller = this.$refs.scroller;
             this.atStart = scroller.scrollLeft <= 1;
             this.atEnd = scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1;
         };
 
-        this.$refs.scroller.addEventListener('scroll', this.update, { passive: true });
+        scroller.addEventListener('scroll', this.update, { passive: true });
         window.addEventListener('resize', this.update);
         this.$nextTick(this.update);
+    },
+
+    // A basket form swaps the catalogue (and this nav) for a fresh copy: let go of the window.
+    destroy() {
+        window.removeEventListener('resize', this.update);
     },
 
     scrollBy(direction) {

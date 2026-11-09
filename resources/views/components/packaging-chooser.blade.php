@@ -78,8 +78,9 @@
 
     <p x-show="atLimit" x-cloak class="text-sm font-semibold text-ink-muted">That's all we have on the shelf right now.</p>
 
-    <button type="submit" x-bind:disabled="empty" disabled class="btn btn-primary mt-1 w-full">
-        <x-icon name="basket" />
+    {{-- On a narrow card the icon gives its room to the running total, which keeps the label on one line. --}}
+    <button type="submit" x-bind:disabled="empty" disabled class="btn btn-primary mt-1 w-full @max-[17rem]:px-3">
+        <x-icon name="basket" class="@max-[17rem]:hidden" />
         <span x-text="empty ? 'Add to basket' : `Add to basket · ${money(total)}`">Add to basket</span>
     </button>
 </form>

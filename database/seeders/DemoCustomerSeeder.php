@@ -13,20 +13,17 @@ use Illuminate\Support\Carbon;
 class DemoCustomerSeeder extends Seeder
 {
     /**
-     * Seed loyalty members with past counter purchases.
+     * Seed the one demo loyalty member, with past counter purchases.
+     * Everyone else uses the kiosk as a non-member.
      *
-     * Maria Santos (card 100245)
+     * Maria Santos (card 12345678)
      *   Has bought: Glucophage 500 mg and Lipitor 20 mg (prescription)
      *   Never bought: Amoxil, Augmentin, Norvasc, Cozaar
-     *
-     * Daniel Okafor (card 100318)
-     *   Has bought: Cozaar 50 mg (prescription), Virlix
-     *   Never bought: anything else on prescription
      */
     public function run(): void
     {
         $maria = User::factory()->create([
-            'member_number' => '100245',
+            'member_number' => '12345678',
             'name' => 'Maria Santos',
             'email' => 'maria.santos@example.test',
         ]);
@@ -43,17 +40,6 @@ class DemoCustomerSeeder extends Seeder
             'Glucophage' => [Packaging::Box, 1],
             'Lipitor' => [Packaging::Box, 1],
             'Claritin' => [Packaging::Piece, 10],
-        ]);
-
-        $daniel = User::factory()->create([
-            'member_number' => '100318',
-            'name' => 'Daniel Okafor',
-            'email' => 'daniel.okafor@example.test',
-        ]);
-
-        $this->pastOrder($daniel, 'C260921-0009', now()->subWeeks(6), [
-            'Cozaar' => [Packaging::Box, 1],
-            'Virlix' => [Packaging::Piece, 20],
         ]);
     }
 

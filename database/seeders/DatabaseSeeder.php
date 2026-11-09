@@ -10,8 +10,8 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the kiosk demo: medicine types, the catalogue, two loyalty
-     * members with prescription history, and a staff admin.
+     * Seed the kiosk demo: medicine types, the catalogue, one loyalty
+     * member with prescription history, and a staff admin.
      */
     public function run(): void
     {

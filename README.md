@@ -24,10 +24,11 @@ Open http://localhost:8000. Re-run `php artisan migrate:fresh --seed` to reset s
 | Tap **What is it for?** (or the picture) on any card | The plain-language description opens under the name. Scrolling the list closes it again, and opening another card's closes the first, so the list stays short |
 | Add **Ascof Lagundi** or **Medicol Advance** | Only a few pieces are left, so the box counter can't go above 0: "Not enough left for a box" |
 | Count 4 boxes and 1 piece of **Solmux** | Refused as a whole, nothing added: the 400 pieces on the shelf cover 4 boxes but not the extra piece |
-| Add **Amoxil** as a guest | Blocked before the piece/box question: "Prescription required. Please proceed to the pharmacy counter for assistance." |
-| **Member sign in** → Maria Santos (100245) | Mock card tap. A pending prescription item is retried automatically |
-| Maria adds **Glucophage** | Allowed, she has bought it before |
-| Maria adds **Amoxil** or **RiteMed Co-Amoxiclav** | Still blocked, she never has |
+| Look at **Amoxil** as a guest | No counters. The card says why before anything is tapped: "Prescription required", refills for members who have bought it here, otherwise the pharmacy counter. It offers **Sign in to add a refill** |
+| **Sign in to add a refill** on any prescription card, then **Continue without a card** | The non-member path: the dialog closes and shopping carries on. The dialog never lists members, so a stranger can't see or pick someone else's card |
+| **Sign in to add a refill** on **Glucophage** → type member card **12345678** | Signs in Maria Santos, the one demo member. Back on Glucophage with "Your prescription for Glucophage is on file", and its counters appear |
+| Maria adds **Glucophage** | Allowed, she has bought it before. The card and basket say "Prescription on file" |
+| Maria looks at **Amoxil** or **RiteMed Co-Amoxiclav** | Still no counters: "We have no record of you buying this before. Please ask the pharmacist at the counter." |
 | **Find alternatives** on Advil | Medicol Advance (same 200 mg softgel) first, then RiteMed Ibuprofen flagged as a different form. Alaxan FR never appears: it adds paracetamol |
 | **Find alternatives** on Bioflu | Neozep Forte, which has the same three ingredients at the same strengths |
 | Ask the assistant about **Claritin** | Loratadine brands only (RiteMed Loratadine, Allerta). Virlix treats allergies too, but has a different ingredient, so it never appears |
@@ -39,7 +40,7 @@ Open http://localhost:8000. Re-run `php artisan migrate:fresh --seed` to reset s
 | **Finish** → **Place order** | Order slip with queue number, Code 128 barcode, and the piece or box count on every line. The session is wiped and the screen returns to "Touch to begin" after 30 seconds |
 | Leave the shopping screen alone for 90 seconds | "Are you still there?" then an automatic reset |
 
-Daniel Okafor (100318) has Cozaar (losartan) on file instead, so his and Maria's prescriptions don't overlap.
+Maria Santos (member card 12345678) is the only seeded member. Everyone else shops as a non-member.
 
 ## The catalogue
 
@@ -66,7 +67,7 @@ The login page and the dashboard use the same "Are you still there?" timer as th
 
 - The seeded admin uses `KIOSK_ADMIN_EMAIL` / `KIOSK_ADMIN_PASSWORD` from `.env`.
 - Add or reset admins with `php artisan kiosk:admin someone@example.com --name="Their Name"`. There is no public register page.
-- Staff use a separate `admin` guard and `admins` table. Members sign in by tapping a card with no password, so a card can never open the staff area.
+- Staff use a separate `admin` guard and `admins` table. Members sign in with their card number and no password, so a card can never open the staff area.
 - Login is limited to 5 attempts a minute. "Touch to begin" and "Start over" sign staff out too, since the kiosk is a shared device.
 
 The dashboard lists kiosk orders awaiting payment, with what to fetch and a flag on prescription items, plus stock alerts. For each order:

@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Mock identification: tapping a loyalty card signs the member in, no
+ * Mock identification: typing a loyalty card number signs the member in, no
  * password. A real kiosk would read the card's NFC chip or barcode here.
  */
 class MemberController extends Controller
@@ -36,10 +36,11 @@ class MemberController extends Controller
         Auth::login($member);
         $request->session()->regenerate(); // new session id after login
 
-        // Signed in from the "Prescription required" popup: go back to that medicine.
+        // Signed in to refill a prescription medicine: go back to it and say whether it can be added now.
         if ($medicine = Medicine::find($validated['add'] ?? null)) {
-            return $this->backToKiosk($request, $medicine)
-                ->with('success', "Welcome back, {$member->firstName()}. Tap Add to basket on {$medicine->name} again.");
+            return $this->backToKiosk($request, $medicine)->with('success', $member->can('addToBasket', $medicine)
+                ? "Welcome back, {$member->firstName()}. Your prescription for {$medicine->name} is on file. Choose how many you want."
+                : "Welcome back, {$member->firstName()}. We have no record of you buying {$medicine->name} before. Please ask the pharmacist at the counter.");
         }
 
         return $this->backToKiosk($request)->with('success', "Welcome back, {$member->firstName()}.");
