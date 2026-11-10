@@ -394,6 +394,24 @@ test('receipts need the signed link', function () {
     $this->get(URL::temporarySignedRoute('receipt', now()->addMinute(), $number))->assertOk();
 });
 
+test('the receipt shows the slip, then sends it into the printer after the configured delay or when Print is tapped', function () {
+    config(['kiosk.receipt_print_delay' => 7]);
+
+    addToBasket('Kremil-S');
+    $this->post(route('checkout.store'));
+    $number = Order::latest('id')->value('order_number');
+
+    $this->get(URL::temporarySignedRoute('receipt', now()->addMinute(), $number))
+        ->assertOk()
+        ->assertSee('printDelay: 7', false)
+        ->assertSee('--print-delay: 7s', false)
+        ->assertSeeText('Print now')
+        ->assertSeeText('Printing your slip')
+        ->assertSeeText('show it at the cashier')
+        // The slip is on screen from the start: order number, barcode and lines.
+        ->assertSeeText($number);
+});
+
 test('checkout rechecks prescriptions', function () {
     // A prescription item that slipped into a guest's basket is still refused.
     $this->withSession(['kiosk.cart' => [medicine('Amoxil')->id => ['piece' => 1]]]);

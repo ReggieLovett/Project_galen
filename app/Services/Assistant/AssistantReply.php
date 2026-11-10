@@ -11,7 +11,7 @@ final readonly class AssistantReply
      * @param  Medicine|null  $requested  the medicine the customer asked about
      * @param  Collection<int, Medicine>  $alternatives  medicine cards shown under the message: in-stock
      *                                                   substitutes, or the medicine itself when it is in stock
-     * @param  'claude'|'rules'  $source  who wrote the message
+     * @param  'claude'|'groq'|'rules'  $source  who wrote the message
      * @param  string|null  $search  catalogue query the kiosk can offer instead
      * @param  Collection<int, Medicine>  $about  the medicines the answer is about, the asked-about one
      *                                            first, so a follow-up like "are they the same dosage?"

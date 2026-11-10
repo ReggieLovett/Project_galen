@@ -30,6 +30,11 @@ return [
 
     'receipt_timeout' => (int) env('KIOSK_RECEIPT_TIMEOUT', 30),
 
+    // The receipt screen "prints" the slip on its own after this many seconds,
+    // or straight away when the customer taps Print. A demo: nothing is sent
+    // to a real printer, the slip feeds out on screen.
+    'receipt_print_delay' => (int) env('KIOSK_RECEIPT_PRINT_DELAY', 10),
+
     // Most pieces (or boxes) of one medicine a customer may take per visit.
     // Empty: no limit, only shelf stock, so one customer can buy 11 tablets
     // and the next 3. Set KIOSK_MAX_PER_ITEM to a number to cap it.
@@ -74,13 +79,18 @@ return [
     | Stock assistant (AI)
     |--------------------------------------------------------------------------
     |
-    | With ANTHROPIC_API_KEY set, Claude writes the suggestion and ranks the
-    | candidates. Without it, the same database lookup runs and a template
-    | writes the message, so the demo works offline.
+    | With ANTHROPIC_API_KEY or GROQ_API_KEY set, the AI writes the suggestion
+    | and ranks the candidates. Without either, the same database lookup runs
+    | and a template writes the message, so the demo works offline.
+    |
+    | provider: "anthropic" or "groq". Left empty, whichever key is set is
+    | used (Anthropic first if both are). The Groq model is GROQ_MODEL in
+    | config/services.php; `model` below is the Claude model.
     |
     */
 
     'assistant' => [
+        'provider' => env('KIOSK_ASSISTANT_PROVIDER'),
         'model' => env('KIOSK_ASSISTANT_MODEL', 'claude-opus-5-5'),
         'max_alternatives' => 3,
         'timeout' => 20,

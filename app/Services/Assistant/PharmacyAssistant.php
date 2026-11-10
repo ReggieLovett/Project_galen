@@ -8,10 +8,14 @@ use App\Enums\Packaging;
 use App\Models\Medicine;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection as BaseCollection;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * The kiosk's stock assistant. When a medicine is out of stock it suggests
@@ -35,7 +39,9 @@ use Illuminate\Support\Str;
  *  4. Answers to questions (FollowUp) are written from catalogue facts
  *     only, never by the model.
  *
- * With no API key, steps 1, 2 and 4 run unchanged and a template writes the
+ * The model is Claude (an Anthropic client) or one on Groq (a Groq API key).
+ * Both get the same facts and their replies pass the same checks. With no
+ * API key, steps 1, 2 and 4 run unchanged and a template writes the
  * suggestion.
  */
 class PharmacyAssistant
@@ -58,6 +64,9 @@ class PharmacyAssistant
         - `alternative_ids` lists the candidate ids you recommend, best match first.
         PROMPT;
 
+    /** Groq's JSON mode checks only that the reply is JSON, so the prompt spells out the shape. */
+    private const JSON_SHAPE = 'Reply with only a JSON object in this shape: {"message": "…", "alternative_ids": [12, 7]}';
+
     /** Words that say nothing about which medicine the customer means. */
     private const STOP_WORDS = [
         'alternative', 'alternatives', 'another', 'anything', 'available', 'banig', 'boxes', 'brand', 'brands',
@@ -70,7 +79,7 @@ class PharmacyAssistant
         'where', 'which', 'with', 'would', 'your',
     ];
 
-    public function __construct(private ?Client $client = null) {}
+    public function __construct(private ?Client $client = null, private ?string $groqKey = null) {}
 
     /**
      * Customer tapped "Find alternatives" on a product.
@@ -99,14 +108,18 @@ class PharmacyAssistant
             );
         }
 
-        $draft = $this->client ? $this->askClaude($medicine, $candidates) : null;
+        [$draft, $source] = match (true) {
+            $this->client !== null => [$this->askClaude($medicine, $candidates), 'claude'],
+            filled($this->groqKey) => [$this->askGroq($medicine, $candidates), 'groq'],
+            default => [null, 'rules'],
+        };
 
         if ($draft !== null && ! $this->namesOtherMedicines($draft['message'], $medicine, $candidates)) {
             return new AssistantReply(
                 $draft['message'],
                 requested: $medicine,
                 alternatives: $this->pick($candidates, $draft['alternative_ids']),
-                source: 'claude',
+                source: $source,
             );
         }
 
@@ -298,10 +311,12 @@ class PharmacyAssistant
     }
 
     /**
+     * What the model is told: the requested medicine and the candidates the
+     * database picked, as catalogue facts. Never the customer's own words.
+     *
      * @param  Collection<int, Medicine>  $candidates
-     * @return array{message: string, alternative_ids: list<int>}|null
      */
-    private function askClaude(Medicine $requested, Collection $candidates): ?array
+    private function facts(Medicine $requested, Collection $candidates): string
     {
         $describe = fn (Medicine $medicine) => [
             'brand' => $medicine->brand,
@@ -316,6 +331,36 @@ class PharmacyAssistant
             'prescription_only' => $medicine->requiresPrescription(),
         ];
 
+        return json_encode([
+            'requested' => $describe($requested) + ['in_stock' => false],
+            'candidates' => $candidates->map(fn (Medicine $medicine) => ['id' => $medicine->id] + $describe($medicine))->all(),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * A model's reply, if it has the shape the kiosk needs.
+     *
+     * @return array{message: string, alternative_ids: list<int>}|null
+     */
+    private function validDraft(mixed $draft): ?array
+    {
+        if (! is_array($draft) || ! is_string($draft['message'] ?? null) || ! is_array($draft['alternative_ids'] ?? null)) {
+            return null;
+        }
+
+        return [
+            'message' => $draft['message'],
+            // JSON mode may send ids as "12"; pick() still drops any that weren't offered.
+            'alternative_ids' => array_values(array_map(intval(...), array_filter($draft['alternative_ids'], is_numeric(...)))),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Medicine>  $candidates
+     * @return array{message: string, alternative_ids: list<int>}|null
+     */
+    private function askClaude(Medicine $requested, Collection $candidates): ?array
+    {
         try {
             $response = $this->client->beta->messages->create(
                 model: config('kiosk.assistant.model'),
@@ -323,10 +368,7 @@ class PharmacyAssistant
                 system: self::SYSTEM_PROMPT,
                 messages: [[
                     'role' => 'user',
-                    'content' => json_encode([
-                        'requested' => $describe($requested) + ['in_stock' => false],
-                        'candidates' => $candidates->map(fn (Medicine $medicine) => ['id' => $medicine->id] + $describe($medicine))->all(),
-                    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+                    'content' => $this->facts($requested, $candidates),
                 ]],
                 outputConfig: [
                     'effort' => 'low',
@@ -365,15 +407,67 @@ class PharmacyAssistant
 
         foreach ($response->content as $block) {
             if ($block->type === 'text') {
-                $draft = json_decode($block->text, true);
-
-                return is_string($draft['message'] ?? null) && is_array($draft['alternative_ids'] ?? null)
-                    ? $draft
-                    : null;
+                return $this->validDraft(json_decode($block->text, true));
             }
         }
 
         return null;
+    }
+
+    /**
+     * Groq's OpenAI-compatible chat API. JSON mode works on every Groq model,
+     * so changing GROQ_MODEL can't break the request; the shape is checked
+     * here and pick() drops any id that was not offered. A busy or failing
+     * server is tried once more, then the template takes over.
+     *
+     * @param  Collection<int, Medicine>  $candidates
+     * @return array{message: string, alternative_ids: list<int>}|null
+     */
+    private function askGroq(Medicine $requested, Collection $candidates): ?array
+    {
+        $worthRetrying = fn (Throwable $e) => $e instanceof ConnectionException
+            || ($e instanceof RequestException && ($e->response->serverError() || $e->response->status() === 429));
+
+        try {
+            $response = Http::baseUrl(config('services.groq.url'))
+                ->withToken($this->groqKey)
+                ->acceptJson()
+                ->timeout(config('kiosk.assistant.timeout'))
+                ->retry(2, 300, $worthRetrying, throw: false)
+                ->post('chat/completions', [
+                    'model' => config('services.groq.model'),
+                    'messages' => [
+                        ['role' => 'system', 'content' => self::SYSTEM_PROMPT."\n\n".self::JSON_SHAPE],
+                        ['role' => 'user', 'content' => $this->facts($requested, $candidates)],
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.2,
+                    'max_completion_tokens' => 2048,
+                ]);
+        } catch (ConnectionException $e) {
+            Log::warning('Stock assistant request failed; using template.', ['provider' => 'groq', 'error' => $e->getMessage()]);
+
+            return null;
+        }
+
+        if ($response->failed()) {
+            Log::warning('Stock assistant request failed; using template.', [
+                'provider' => 'groq',
+                'status' => $response->status(),
+                'error' => $response->json('error.message'),
+            ]);
+
+            return null;
+        }
+
+        // "length" and the like: no trustworthy JSON, so use the template.
+        if ($response->json('choices.0.finish_reason') !== 'stop') {
+            Log::warning('Stock assistant stopped early; using template.', ['provider' => 'groq', 'finish_reason' => $response->json('choices.0.finish_reason')]);
+
+            return null;
+        }
+
+        return $this->validDraft(json_decode((string) $response->json('choices.0.message.content'), true));
     }
 
     /**

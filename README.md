@@ -37,7 +37,7 @@ Open http://localhost:8000. Re-run `php artisan migrate:fresh --seed` to reset s
 | Type "is neozip the same as bioflu?" | Small typos are forgiven: Neozep Forte is the same medicine as Bioflu, only the brand and price differ |
 | Ask about **Lipitor** | Suggests RiteMed Atorvastatin 20 mg, which Maria can add because she has filled Lipitor 20 mg |
 | Ask "what can I take for a headache?" or "how many should I take?" | Declined: what to take and how much is for the pharmacist |
-| **Finish** → **Place order** | Order slip with queue number, Code 128 barcode, and the piece or box count on every line. The session is wiped and the screen returns to "Touch to begin" after 30 seconds |
+| **Finish** → **Place order** | Order slip with queue number, Code 128 barcode, and the piece or box count on every line. The slip is on screen under a drawn printer. After 10 seconds (`KIOSK_RECEIPT_PRINT_DELAY`) the printer pulls it up and out of view, as the kiosk's real printer would take it, and "Slip printed: take it from the kiosk's printer" is left in its place. The **Print now** button fills up as that time comes closer. Tapping it prints straight away, and **Print again** brings the slip back and prints it again. **Done** before the slip is out prints it first, then leaves. It's a demo, so nothing is sent to a real printer. The session is wiped and the screen returns to "Touch to begin" after 30 seconds, with at least 20 seconds left once the slip is out |
 | Leave the shopping screen alone for 90 seconds | "Are you still there?" then an automatic reset |
 
 Maria Santos (member card 12345678) is the only seeded member. Everyone else shops as a non-member.
@@ -90,7 +90,12 @@ Both only act on an order that is still awaiting payment, checked in the same da
 
 The drawer offers tap-to-ask buttons for these follow-ups, starter questions built from today's out-of-stock list, and a large typed-question box. Replies are announced to screen readers. The header button is always labelled "Ask", and a banner above the catalogue points customers to it.
 
-With no `ANTHROPIC_API_KEY`, steps 1, 2, 4 and 5 run unchanged and a template writes the suggestion, so the demo works offline. Set the key to have Claude (`claude-opus-5-5` at low effort, with server-side refusal fallback) write it. The add-to-basket button still goes through the prescription check, so the assistant can suggest a prescription medicine but can't hand it out.
+With no API key, steps 1, 2, 4 and 5 run unchanged and a template writes the suggestion, so the demo works offline. Set one key in `.env` to have an AI write it:
+
+- `ANTHROPIC_API_KEY`: Claude (`claude-opus-5-5` at low effort, with server-side refusal fallback).
+- `GROQ_API_KEY`: a model on Groq, `openai/gpt-oss-120b` unless `GROQ_MODEL` names another. It uses Groq's JSON mode, which every Groq model supports, and goes through the same checks. A bad key, a timeout or a cut-off reply falls back to the template, and the reason is written to `storage/logs/laravel.log`.
+
+With both keys set, Claude is used unless `KIOSK_ASSISTANT_PROVIDER=groq`. The drawer says "Written by Claude" or "Written by AI" under the AI's replies. The add-to-basket button still goes through the prescription check, so the assistant can suggest a prescription medicine but can't hand it out.
 
 ## Configuration
 
@@ -149,4 +154,4 @@ The drawers and popups on `/kiosk` are opened from flash data: `panel` (assistan
 php artisan test
 ```
 
-84 feature tests cover the prescription rules, piece and box pricing and counting both in one tap, plain-language descriptions, stock limits (counted in pieces), checkout and session reset, signed receipts, the staff login, paying and cancelling orders, and the assistant's guardrails and follow-up answers. The Claude path is exercised through the real SDK with a mocked HTTP transport.
+97 feature tests cover the prescription rules, piece and box pricing and counting both in one tap, plain-language descriptions, stock limits (counted in pieces), checkout and session reset, signed receipts, the staff login, paying and cancelling orders, and the assistant's guardrails and follow-up answers. The Claude path is exercised through the real SDK with a mocked HTTP transport, and the Groq path with Laravel's `Http::fake()`. `phpunit.xml` blanks both API keys, so the tests never call a real AI service.

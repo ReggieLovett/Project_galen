@@ -3,6 +3,9 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/* Screens too short for the receipt at full size (1366×768, 1280×800): tighter spacing, e.g. short:my-3. */
+@custom-variant short (@media (max-height: 52rem));
+
 @theme {
     --font-sans: 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Figtree', ui-sans-serif, system-ui, sans-serif;
@@ -193,6 +196,116 @@
     animation-delay: 1.2s;
 }
 
+/* The order slip and the kiosk's printer (receipt.blade.php). The slip is on
+   screen from the start. Printing pulls it up into the printer slot and out
+   of view, as the real printer takes the paper: the rollers catch it (a small
+   nudge down), then draw it in at a steady speed. */
+.slip-feed {
+    /* Clip only the top edge, at the printer slot, so the slip's shadow still shows. */
+    clip-path: inset(0 -4rem -6rem -4rem);
+}
+
+.slip[data-print='printing'] {
+    animation: slip-print 2.4s forwards;
+}
+
+.slip[data-print='printed'] {
+    transform: translateY(-100%);
+}
+
+/* Printing again: the slip is back on screen for a moment, then goes in again. */
+.slip[data-print='returning'] {
+    animation: slip-return 250ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes slip-print {
+    0% {
+        transform: translateY(0);
+        animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    8% {
+        transform: translateY(0.5rem);
+        animation-timing-function: linear;
+    }
+    100% {
+        transform: translateY(-100%);
+    }
+}
+
+@keyframes slip-return {
+    from {
+        transform: translateY(0.75rem);
+        opacity: 0;
+    }
+}
+
+/* The printer's light: dim while waiting, blinking while it prints, steady once done. */
+.printer-light {
+    background-color: rgb(255 255 255 / 0.25);
+    transition: background-color 200ms ease;
+}
+
+.printer-light[data-print='printing'],
+.printer-light[data-print='returning'] {
+    background-color: var(--color-ok);
+    animation: printer-blink 0.5s steps(2, jump-none) infinite;
+}
+
+.printer-light[data-print='printed'] {
+    background-color: var(--color-ok);
+}
+
+@keyframes printer-blink {
+    to {
+        opacity: 0.3;
+    }
+}
+
+/* The Print button fills up as the automatic print comes closer. */
+.print-countdown {
+    clip-path: inset(0 100% 0 0);
+    animation: print-countdown var(--print-delay) linear forwards;
+}
+
+@keyframes print-countdown {
+    to {
+        clip-path: inset(0 0 0 0);
+    }
+}
+
+/* Same steps, no movement: the slip fades out as it prints, and back in to print again. */
+@media (prefers-reduced-motion: reduce) {
+    .slip[data-print='printing'] {
+        animation: slip-vanish 300ms ease forwards;
+    }
+
+    .slip[data-print='printed'] {
+        transform: none;
+        opacity: 0;
+    }
+
+    .slip[data-print='returning'] {
+        animation: slip-appear 200ms ease forwards;
+    }
+
+    .printer-light[data-print='printing'],
+    .printer-light[data-print='returning'] {
+        animation: none;
+    }
+}
+
+@keyframes slip-vanish {
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slip-appear {
+    from {
+        opacity: 0;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .ripple {
         animation: none;
@@ -226,5 +339,16 @@
         border: 0 !important;
         max-width: none !important;
         padding: 0 !important;
+    }
+
+    /* A slip already pulled into the on-screen printer still prints in full. */
+    .slip {
+        transform: none !important;
+        opacity: 1 !important;
+        animation: none !important;
+    }
+
+    .slip-feed {
+        clip-path: none !important;
     }
 }

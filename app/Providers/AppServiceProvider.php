@@ -18,15 +18,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // No API key: the assistant runs on its built-in rules and template.
-        $this->app->singleton(PharmacyAssistant::class, fn () => new PharmacyAssistant(
-            filled($key = config('services.anthropic.key'))
-                ? new Client(apiKey: $key, requestOptions: [
+        $this->app->singleton(PharmacyAssistant::class, function () {
+            $provider = config('kiosk.assistant.provider');
+
+            if (filled($key = config('services.anthropic.key')) && in_array($provider, [null, '', 'anthropic'], true)) {
+                return new PharmacyAssistant(new Client(apiKey: $key, requestOptions: [
                     'timeout' => config('kiosk.assistant.timeout'),
                     'maxRetries' => 1,
-                ])
-                : null,
-        ));
+                ]));
+            }
+
+            if (filled($key = config('services.groq.key')) && in_array($provider, [null, '', 'groq'], true)) {
+                return new PharmacyAssistant(groqKey: $key);
+            }
+
+            // No API key: the assistant runs on its built-in rules and template.
+            return new PharmacyAssistant;
+        });
     }
 
     /**

@@ -32,5 +32,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Tests never call a real AI API, whatever keys are in .env. -->
+        <env name="ANTHROPIC_API_KEY" value=""/>
+        <env name="GROQ_API_KEY" value=""/>
+        <env name="KIOSK_ASSISTANT_PROVIDER" value=""/>
     </php>
 </phpunit>

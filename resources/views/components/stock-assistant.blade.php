@@ -78,7 +78,11 @@
                         </a>
                     @endif
 
-                    <p class="text-sm text-ink-muted">{{ $entry['source'] === 'claude' ? 'Written by Claude from our live stock list' : 'From our live stock list' }}</p>
+                    <p class="text-sm text-ink-muted">{{ match ($entry['source']) {
+                        'claude' => 'Written by Claude from our live stock list',
+                        'groq' => 'Written by AI from our live stock list',
+                        default => 'From our live stock list',
+                    } }}</p>
                 </div>
             @empty
                 @if ($outOfStock->isNotEmpty())

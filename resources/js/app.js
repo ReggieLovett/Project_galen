@@ -184,27 +184,112 @@ Alpine.data('horizontalScroller', () => ({
     },
 }));
 
-Alpine.data('receipt', ({ seconds, home }) => ({
+// The receipt screen. The slip is on screen from the start; printing pulls
+// it up into the on-screen printer and out of view, as the kiosk's real
+// printer takes it: on its own after `printDelay` seconds, or at once when
+// the customer taps Print. A demo, so nothing goes to a real printer. The
+// motion itself is CSS (.slip in app.css); this only moves `printState`
+// through waiting → printing → printed, and through `returning` (the slip
+// back on screen for a moment) when it is printed again. The screen never
+// resets, and Done never leaves, before the slip has printed.
+const SLIP_READING_SECONDS = 20;
+
+Alpine.data('receipt', ({ seconds, home, printDelay }) => ({
     seconds,
     remaining: seconds,
+    printDelay,
+    printIn: printDelay,
+    printState: 'waiting',
+    leaving: false,
 
     init() {
         let endsAt = Date.now() + seconds * 1000;
+        const printAt = Date.now() + printDelay * 1000;
 
         this.extend = (extra) => (endsAt += extra * 1000);
 
         this.timer = setInterval(() => {
             this.remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-            if (this.remaining === 0) this.done();
+
+            if (this.printState === 'waiting') {
+                this.printIn = Math.max(0, Math.ceil((printAt - Date.now()) / 1000));
+                if (this.printIn === 0) this.print();
+            }
+
+            if (this.remaining === 0) this.leave();
         }, 250);
     },
 
     print() {
+        if (this.leaving || this.printState === 'printing' || this.printState === 'returning') return;
+
+        if (this.printState === 'waiting') {
+            this.startFeed();
+            return;
+        }
+
+        // Printing again: the slip comes back on screen, then goes into the printer again.
         this.extend(15);
-        window.print();
+        this.printState = 'returning';
+        setTimeout(() => this.startFeed(), 650);
     },
 
+    startFeed() {
+        this.printState = 'printing';
+        this.showPrinter();
+
+        // If the browser never plays the animation (animations off, screen not drawing),
+        // don't leave the slip stuck half-way: it counts as printed anyway.
+        clearTimeout(this.feedFallback);
+        this.feedFallback = setTimeout(() => this.printState === 'printing' && this.finishPrint(), 3500);
+    },
+
+    // The slip has gone into the printer (or, with reduced motion, faded out).
+    printed(event) {
+        if (event.target === this.$refs.slip && ['slip-print', 'slip-vanish'].includes(event.animationName)) {
+            this.finishPrint();
+        }
+    },
+
+    // The slip has printed: leave time to take it, or go if Done was already tapped.
+    finishPrint() {
+        clearTimeout(this.feedFallback);
+        this.printState = 'printed';
+
+        if (this.leaving) {
+            setTimeout(() => this.leave(), 1200);
+        } else if (this.remaining < SLIP_READING_SECONDS) {
+            this.extend(SLIP_READING_SECONDS - this.remaining);
+        }
+    },
+
+    // On a narrow screen the printer sits below the buttons: bring it into view as it prints.
+    showPrinter() {
+        const { top } = this.$refs.printer.getBoundingClientRect();
+
+        if (top >= 0 && top <= window.innerHeight - 160) return;
+
+        this.$refs.printer.scrollIntoView({
+            block: 'start',
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        });
+    },
+
+    // Done: never send the customer away without their slip.
     done() {
+        if (this.leaving) return;
+
+        this.leaving = true;
+
+        if (this.printState === 'printed') {
+            this.leave();
+        } else if (this.printState === 'waiting') {
+            this.startFeed();
+        }
+        // Printing already: finishPrint() leaves once the slip is out.
+    },
+
+    leave() {
         clearInterval(this.timer);
         window.location.replace(home);
     },
