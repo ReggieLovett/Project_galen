@@ -11,7 +11,13 @@
 
 <x-layouts.kiosk title="Shop" class="overflow-hidden">
 {{-- panel: which drawer is open. refillFor: the prescription medicine to go back to after a member signs in. --}}
-<div x-data="{ panel: @js($openPanel), refillFor: @js($rx['medicine_id'] ?? null) }" x-on:keydown.escape.window="panel = null" class="flex h-dvh flex-col">
+<div
+    x-data="{ panel: @js($openPanel), refillFor: @js($rx['medicine_id'] ?? null), showBackToTop: false }"
+    x-on:keydown.escape.window="panel = null"
+    x-on:catalogue-scroll.window="showBackToTop = $event.detail > 420"
+    x-on:catalogue-scroll-to-top.window="document.querySelector('[data-catalogue]')?.scrollTo({ top: 0, behavior: 'smooth' })"
+    class="flex h-dvh flex-col"
+>
 
     {{-- ================= Top bar ================= --}}
     <header class="flex flex-wrap items-center gap-3 border-b-4 border-brand-deep bg-brand px-4 py-3 text-white sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4">
@@ -86,7 +92,7 @@
 
         <form method="POST" action="{{ route('kiosk.reset') }}">
             @csrf
-            <button type="submit" class="btn-icon border-white/40 bg-white/10 text-white hover:bg-white/20" aria-label="Start over"><x-icon name="rotate" /></button>
+            <button type="submit" class="btn-icon border-white/40 bg-white/10 text-white hover:bg-white/20" aria-label="Exit kiosk and clear basket" title="Exit kiosk"><x-icon name="log-out" /></button>
         </form>
         </div>
     </header>
@@ -115,7 +121,7 @@
 
             {{-- relative: keeps screen-reader-only text inside this scroller, so it can't make the whole page scroll.
                  Scrolling tells the cards, so an open "What is it for?" closes again. --}}
-            <div data-catalogue data-keep-scroll="catalogue" x-on:scroll.passive="$dispatch('catalogue-scroll', $el.scrollTop)" class="relative min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+            <div data-catalogue data-keep-scroll="catalogue" x-on:scroll.passive="$dispatch('catalogue-scroll', $el.scrollTop)" class="catalogue-shelf relative min-h-0 flex-1 overflow-y-auto px-4 py-7 sm:px-8 sm:py-9">
                 {{-- Help is one tap away --}}
                 <button type="button" x-on:click="panel = 'assistant'" class="focus-ring mb-5 flex w-full items-center gap-4 rounded-2xl border-2 border-assist/15 bg-assist-soft p-4 text-left transition-colors duration-150 hover:border-assist/40">
                     <span class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-assist text-white"><x-icon name="sparkles" /></span>
@@ -148,7 +154,7 @@
                 </div>
 
                 {{-- Columns follow the space the basket leaves, not the screen width, so cards never get too narrow for their buttons. --}}
-                <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4" aria-label="Medicines">
+                <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-7" aria-label="Medicines">
                     @forelse ($medicines as $medicine)
                         <x-medicine-card :medicine="$medicine" :in-basket="$basketQuantities[$medicine->id] ?? []" />
                     @empty
@@ -160,6 +166,18 @@
                         </li>
                     @endforelse
                 </ul>
+
+                <button
+                    type="button"
+                    x-show="showBackToTop"
+                    x-transition.opacity.duration.200ms
+                    x-on:click="$dispatch('catalogue-scroll-to-top')"
+                    class="focus-ring fixed right-5 bottom-6 z-20 flex size-14 items-center justify-center rounded-full bg-brand text-white shadow-[0_14px_30px_-12px_rgb(15_118_110/0.75)] transition-transform duration-150 hover:-translate-y-1 hover:bg-brand-hover sm:right-8 lg:right-[27rem] xl:right-[29rem]"
+                    aria-label="Back to top"
+                    x-cloak
+                >
+                    <x-icon name="arrow-up" :size="22" />
+                </button>
             </div>
         </main>
 

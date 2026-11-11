@@ -21,6 +21,16 @@
             <x-alert type="error">{{ $value }}</x-alert>
         @endsession
 
+        <section class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border-2 border-brand/20 bg-brand-soft px-5 py-4">
+            <div>
+                <h2 class="text-xl font-bold">Medicine inventory</h2>
+                <p class="mt-1 text-ink-muted">Update shelf stock and manage the medicines shown on the kiosk.</p>
+            </div>
+            <a href="{{ route('admin.medicines.index') }}" class="btn btn-primary">
+                <x-icon name="pill" />Manage inventory
+            </a>
+        </section>
+
         <section class="rounded-2xl border-2 border-line bg-surface">
             <h2 class="flex items-center gap-3 border-b-2 border-line px-5 py-4 text-xl font-bold">
                 Orders awaiting payment

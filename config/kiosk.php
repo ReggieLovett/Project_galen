@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'name' => env('KIOSK_NAME', 'Riverside Pharmacy'),
+    'name' => env('KIOSK_NAME', 'Galen Pharmacy'),
 
     // ISO 4217 code. Philippine pesos (₱) by default; prices are formatted by <x-money>.
     'currency' => env('KIOSK_CURRENCY', 'PHP'),

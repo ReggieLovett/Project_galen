@@ -20,8 +20,8 @@
     x-on:catalogue-scroll.window="scrolled($event.detail)"
     x-on:details-opened.window="$event.detail !== key && (open = false)"
     {{ $attributes->class([
-        '@container flex scroll-mt-4 flex-col overflow-hidden rounded-2xl border-2 bg-surface transition-[border-color,box-shadow] duration-200',
-        'border-brand shadow-[0_10px_30px_-18px_rgb(215_25_32/0.6)]' => $inBasket,
+        '@container flex scroll-mt-4 flex-col overflow-hidden rounded-3xl border-2 bg-surface transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:shadow-[0_18px_36px_-24px_rgb(15_118_110/0.7)]',
+        'border-brand shadow-[0_10px_30px_-18px_rgb(15_118_110/0.6)]' => $inBasket,
         'border-line' => ! $inBasket,
         'border-dashed' => ! $medicine->isInStock(),
     ]) }}>
@@ -42,7 +42,7 @@
         </div>
     @else
         <div class="relative cursor-pointer" x-on:click="toggle()">
-            <x-medicine-picture :medicine="$medicine" @class(['h-36 w-full', 'grayscale-[0.6] opacity-75' => ! $medicine->isInStock()]) />
+            <x-medicine-picture :medicine="$medicine" @class(['h-48 w-full bg-sunken/50', 'grayscale-[0.6] opacity-75' => ! $medicine->isInStock()]) />
 
             <div class="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
                 @if ($medicine->requiresPrescription())
@@ -62,7 +62,7 @@
         </div>
     @endif
 
-    <div @class(['flex flex-1 flex-col', 'px-4 pb-4' => $compact, 'p-5 pt-4' => ! $compact])>
+    <div @class(['flex flex-1 flex-col', 'px-4 pb-4' => $compact, 'p-6 pt-5' => ! $compact])>
         @unless ($compact)
             <h3 id="name-{{ $key }}" class="text-xl leading-snug font-bold text-pretty">{{ $medicine->fullName() }}</h3>
             <p class="mt-0.5 text-lg leading-snug font-semibold">{{ $medicine->drugLabel() }}</p>

@@ -42,6 +42,7 @@ Route::prefix(config('kiosk.admin.path'))->name('admin.')->group(function () {
 
     Route::middleware('auth:admin')->group(function () {
         Route::get('/', Admin\DashboardController::class)->name('dashboard');
+        Route::resource('medicines', Admin\MedicineController::class);
         Route::patch('/orders/{order:order_number}/complete', [Admin\OrderController::class, 'complete'])->name('orders.complete');
         Route::patch('/orders/{order:order_number}/cancel', [Admin\OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/logout', [Admin\AuthController::class, 'logout'])->name('logout');

@@ -10,27 +10,27 @@
     --font-sans: 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Figtree', ui-sans-serif, system-ui, sans-serif;
 
-    /* Surfaces: white cards on a faint warm grey, like a pharmacy shelf */
-    --color-canvas: #f7f4f4;
+    /* Surfaces: a quiet, cool shelf backdrop that keeps product cards legible */
+    --color-canvas: #f3f7f6;
     --color-surface: #ffffff;
-    --color-sunken: #f1eaea;
-    --color-line: #eadede;
-    --color-line-strong: #d6c2c2;
+    --color-sunken: #e8f0ee;
+    --color-line: #d5e4e0;
+    --color-line-strong: #b6d0ca;
 
     /* Text */
-    --color-ink: #221616;
-    --color-ink-muted: #5f5151;
+    --color-ink: #17302d;
+    --color-ink-muted: #526b67;
 
-    /* Brand: drugstore red and white. White text on brand passes WCAG AA (5.2:1). */
-    --color-brand: #d71920;
-    --color-brand-hover: #b0131a;
-    --color-brand-deep: #8c0f15;
-    --color-brand-soft: #fde8e8;
+    /* Brand: a pharmacy teal with warm coral reserved for emphasis. */
+    --color-brand: #0f766e;
+    --color-brand-hover: #0b5f59;
+    --color-brand-deep: #134e4a;
+    --color-brand-soft: #dff4ef;
 
     /* Stock assistant (AI): navy, so it never looks like a brand button */
-    --color-assist: #1e3a8a;
-    --color-assist-hover: #172f6f;
-    --color-assist-soft: #e6ecf9;
+    --color-assist: #4856a6;
+    --color-assist-hover: #354184;
+    --color-assist-soft: #e9ebfb;
 
     /* Good news: "In stock", "Marked as paid". Red would read as a warning. */
     --color-ok: #15803d;
@@ -156,6 +156,12 @@
 
     .btn-icon {
         @apply focus-ring inline-flex size-14 shrink-0 items-center justify-center rounded-xl border-2 border-line bg-surface text-ink transition-[background-color,transform] duration-150 ease-out hover:bg-sunken active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40;
+    }
+
+    .catalogue-shelf {
+        background:
+            linear-gradient(180deg, rgb(255 255 255 / 0.72), transparent 16rem),
+            var(--color-canvas);
     }
 
     .chip {
