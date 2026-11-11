@@ -64,7 +64,7 @@
     <div x-ref="printer" class="mx-auto w-full max-w-sm scroll-mt-4">
         <p class="sr-only" aria-live="polite" x-text="{ printing: 'Printing your order slip.', printed: 'Your order slip is printed. Take it from the kiosk\'s printer.' }[printState] ?? ''"></p>
 
-        <div class="no-print relative z-10 -mx-3 flex h-5 items-center gap-3 rounded-full bg-ink px-4 shadow-[0_8px_16px_-8px_rgb(34_22_22/0.6)]" aria-hidden="true">
+        <div class="no-print relative z-10 -mx-3 flex h-5 items-center gap-3 rounded-full bg-ink px-4 shadow-[0_8px_16px_-8px_rgb(23_48_45/0.6)]" aria-hidden="true">
             <span class="h-1 flex-1 rounded-full bg-black/70"></span>
             <span class="printer-light size-2 rounded-full" x-bind:data-print="printState"></span>
         </div>
@@ -94,7 +94,7 @@
                 data-print="waiting"
                 x-bind:data-print="printState"
                 x-on:animationend="printed($event)"
-                class="slip receipt-paper w-full rounded-b-2xl bg-surface p-7 pt-9 short:p-5 short:pt-7 font-mono text-[15px] text-ink shadow-[0_2px_4px_rgb(15_46_29/0.06),0_24px_48px_-16px_rgb(15_46_29/0.28)]"
+                class="slip receipt-paper w-full rounded-b-2xl bg-surface p-7 pt-9 short:p-5 short:pt-7 font-mono text-[15px] text-ink shadow-[0_2px_4px_rgb(23_48_45/0.06),0_24px_48px_-16px_rgb(23_48_45/0.28)]"
                 aria-label="Order slip"
             >
                 <header class="text-center">

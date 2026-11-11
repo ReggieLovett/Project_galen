@@ -71,6 +71,17 @@ test('search and filters are query strings', function () {
     $this->get(route('kiosk', ['type' => 'vitamins']))->assertSessionHasErrors('type');
 });
 
+test('the checkout confirmation is refreshed with the basket', function () {
+    // app.js swaps every data-kiosk-region after a basket form, so the
+    // confirmation must be one of them, or it shows the basket as it was
+    // when the page loaded.
+    addToBasket('Biogesic', Packaging::Piece, 3);
+
+    $this->get(route('kiosk'))
+        ->assertSee('data-kiosk-region="checkout"', false)
+        ->assertSeeInOrder(['Ready to finish?', 'Biogesic', '₱15.00', 'Total to pay at the counter']);
+});
+
 test('anyone can add any number of single pieces', function () {
     $biogesic = medicine('Biogesic');
 

@@ -1,23 +1,10 @@
-<x-layouts.kiosk title="Medicine inventory" noindex>
-    <header class="flex flex-wrap items-center gap-4 border-b-2 border-line bg-surface px-6 py-4">
-        <a href="{{ route('admin.dashboard') }}" class="focus-ring rounded-xl" aria-label="Back to staff dashboard">
-            <x-logo-mark class="size-12 rounded-xl bg-brand text-white" />
-        </a>
-        <div class="min-w-0 flex-1">
-            <p class="font-display text-xl font-bold">{{ config('kiosk.name') }} · Inventory</p>
-            <p class="text-ink-muted">Signed in as {{ auth('admin')->user()->name }}</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ route('admin.dashboard') }}" class="btn btn-quiet">Dashboard</a>
-            <a href="{{ route('admin.medicines.create') }}" class="btn btn-primary"><x-icon name="plus" />Add medicine</a>
-            <form method="POST" action="{{ route('admin.logout') }}">
-                @csrf
-                <button type="submit" class="btn btn-quiet"><x-icon name="log-out" />Log out</button>
-            </form>
-        </div>
-    </header>
+<x-layouts.staff title="Medicine inventory" section="Inventory">
+    <x-slot:actions>
+        <a href="{{ route('admin.dashboard') }}" class="btn btn-quiet"><x-icon name="arrow-left" />Orders and stock</a>
+        <a href="{{ route('admin.medicines.create') }}" class="btn btn-primary"><x-icon name="plus" />Add medicine</a>
+    </x-slot:actions>
 
-    <main class="mx-auto min-h-dvh max-w-7xl space-y-6 px-6 py-8 pb-28">
+    <main class="mx-auto max-w-7xl space-y-6 px-6 py-8 pb-16">
         @session('success')
             <x-alert>{{ $value }}</x-alert>
         @endsession
@@ -57,11 +44,11 @@
 
             <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" aria-label="Medicine inventory">
                 @forelse ($medicines as $medicine)
-                    <li class="flex min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-line bg-surface shadow-[0_12px_30px_-24px_rgb(23_48_45/0.8)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_18px_34px_-24px_rgb(15_118_110/0.65)]">
+                    <li class="flex min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-line bg-surface shadow-[0_12px_30px_-24px_rgb(23_48_45/0.8)] transition-colors duration-200 hover:border-brand/40">
                         <div class="relative">
                             <x-medicine-picture :medicine="$medicine" class="h-32 w-full bg-sunken/50" />
-                            <span class="absolute top-3 right-3 rounded-lg px-2 py-1 text-xs font-semibold shadow-sm {{ $medicine->isInStock() ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger' }}">
-                                {{ $medicine->isInStock() ? 'Available' : 'Unavailable' }}
+                            <span class="badge absolute top-3 right-3 shadow-sm {{ $medicine->isInStock() ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger' }}">
+                                {{ $medicine->isInStock() ? 'In stock' : 'Out of stock' }}
                             </span>
                         </div>
 
@@ -70,9 +57,9 @@
                                 <div class="flex items-start gap-2">
                                     <div class="min-w-0">
                                         <h2 class="truncate text-lg font-bold" title="{{ $medicine->fullName() }}">{{ $medicine->fullName() }}</h2>
-                                        <p class="mt-0.5 truncate text-xs text-ink-muted">{{ $medicine->drugLabel() }} · {{ $medicine->dosage_form }}</p>
+                                        <p class="mt-0.5 truncate text-sm text-ink-muted">{{ $medicine->drugLabel() }} · {{ $medicine->dosage_form }}</p>
                                     </div>
-                                    <span class="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold {{ $medicine->category->requires_prescription ? 'bg-rx-soft text-rx' : 'bg-brand-soft text-brand-hover' }}">
+                                    <span class="badge shrink-0 {{ $medicine->category->requires_prescription ? 'bg-rx-soft text-rx' : 'bg-brand-soft text-brand-hover' }}">
                                         {{ $medicine->category->requires_prescription ? 'Prescription' : 'OTC' }}
                                     </span>
                                 </div>
@@ -80,32 +67,31 @@
 
                             <dl class="grid grid-cols-2 gap-2">
                                 <div class="rounded-xl bg-sunken px-3 py-2">
-                                    <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Stock</dt>
+                                    <dt class="text-sm font-semibold text-ink-muted">Stock</dt>
                                     <dd class="mt-0.5 text-base font-bold tabular-nums">
                                         {{ number_format($medicine->stock) }}
-                                        <span class="text-xs font-medium text-ink-muted">pcs</span>
+                                        <span class="text-sm font-medium text-ink-muted">pcs</span>
                                     </dd>
+                                    {{-- Only when staff need to act; the picture's badge already says in or out of stock. --}}
                                     @if (! $medicine->isInStock())
-                                        <p class="text-[11px] font-semibold text-danger">Restock needed</p>
+                                        <p class="text-sm font-semibold text-danger">Restock needed</p>
                                     @elseif ($medicine->isLowStock())
-                                        <p class="text-[11px] font-semibold text-rx">Running low</p>
-                                    @else
-                                        <p class="text-[11px] font-semibold text-ok">Ready to buy</p>
+                                        <p class="text-sm font-semibold text-rx">Running low</p>
                                     @endif
                                 </div>
                                 <div class="rounded-xl bg-sunken px-3 py-2">
-                                    <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Prices</dt>
-                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums"><x-money :amount="$medicine->piece_price" /> <span class="text-[11px] font-medium text-ink-muted">each</span></dd>
-                                    <dd class="text-xs font-semibold tabular-nums"><x-money :amount="$medicine->box_price" /> <span class="text-[11px] font-medium text-ink-muted">box</span></dd>
+                                    <dt class="text-sm font-semibold text-ink-muted">Prices</dt>
+                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums"><x-money :amount="$medicine->piece_price" /> <span class="text-sm font-medium text-ink-muted">each</span></dd>
+                                    <dd class="text-sm font-semibold tabular-nums"><x-money :amount="$medicine->box_price" /> <span class="text-sm font-medium text-ink-muted">box</span></dd>
                                 </div>
                             </dl>
 
                             <div class="mt-auto flex gap-2 border-t-2 border-line pt-3">
-                                <a href="{{ route('admin.medicines.edit', $medicine) }}" class="btn btn-primary min-h-10 flex-1 px-3 text-sm">Edit</a>
+                                <a href="{{ route('admin.medicines.edit', $medicine) }}" class="btn btn-primary min-h-12 flex-1 px-4 text-base" aria-label="Edit {{ $medicine->fullName() }}">Edit</a>
                                 <form method="POST" action="{{ route('admin.medicines.destroy', $medicine) }}" x-data x-on:submit="confirm(@js("Remove {$medicine->fullName()} from inventory?")) || $event.preventDefault()">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-quiet min-h-10 px-3 text-sm text-danger" aria-label="Delete {{ $medicine->fullName() }}">Delete</button>
+                                    <button type="submit" class="btn btn-quiet min-h-12 px-4 text-base text-danger" aria-label="Delete {{ $medicine->fullName() }}">Delete</button>
                                 </form>
                             </div>
                         </div>
@@ -132,7 +118,4 @@
         </section>
     </main>
 
-    <x-idle-timer leave="Log out now">
-        For security, you'll be logged out and the kiosk will go back to the start screen in <strong class="text-ink tabular-nums" x-text="`${remaining} seconds`"></strong>.
-    </x-idle-timer>
-</x-layouts.kiosk>
+</x-layouts.staff>

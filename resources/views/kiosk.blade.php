@@ -172,7 +172,7 @@
                     x-show="showBackToTop"
                     x-transition.opacity.duration.200ms
                     x-on:click="$dispatch('catalogue-scroll-to-top')"
-                    class="focus-ring fixed right-5 bottom-6 z-20 flex size-14 items-center justify-center rounded-full bg-brand text-white shadow-[0_14px_30px_-12px_rgb(15_118_110/0.75)] transition-transform duration-150 hover:-translate-y-1 hover:bg-brand-hover sm:right-8 lg:right-[27rem] xl:right-[29rem]"
+                    class="focus-ring fixed right-5 bottom-28 z-20 flex size-14 items-center justify-center rounded-full bg-brand text-white shadow-[0_14px_30px_-12px_rgb(15_118_110/0.75)] transition-transform duration-150 hover:-translate-y-1 hover:bg-brand-hover sm:right-8 lg:right-[27rem] lg:bottom-6 xl:right-[29rem]"
                     aria-label="Back to top"
                     x-cloak
                 >
@@ -340,8 +340,9 @@
         </div>
     </div>
 
-    {{-- ================= Checkout confirmation ================= --}}
-    <div x-show="panel === 'checkout'" x-cloak x-trap.noscroll="panel === 'checkout'" class="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-5" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+    {{-- ================= Checkout confirmation =================
+         A swapped region: it lists the basket, so it must change when a basket form does. --}}
+    <div data-kiosk-region="checkout" x-show="panel === 'checkout'" x-cloak x-trap.noscroll="panel === 'checkout'" class="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-5" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
         <div x-on:click="panel = null" class="pointer-events-auto absolute inset-0 bg-ink/60"></div>
         <div class="pointer-events-auto relative flex max-h-full w-full max-w-lg flex-col rounded-2xl bg-surface p-8">
             <h2 id="checkout-title" class="text-3xl font-bold">Ready to finish?</h2>

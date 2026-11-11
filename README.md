@@ -1,6 +1,6 @@
 # Pharmacy Kiosk
 
-A self-service pharmacy kiosk demo built on Laravel 13, Blade and Alpine.js, set up for a Philippine drugstore: local brands such as Biogesic, Neozep Forte and RiteMed generics, prices in pesos (₱), and a red-and-white design. Customers search medicines, see in plain words what each one is for, count any number of **pieces and boxes** with +/- buttons (limited only by the shared shelf stock), fill a basket and leave with a barcoded order slip to pay at the counter. Prescription medicines are gated on the member's purchase history, and an AI stock assistant suggests same-ingredient brands when something is out of stock and answers questions about them, such as "are they the same dosage?".
+A self-service pharmacy kiosk demo built on Laravel 13, Blade and Alpine.js, set up for a Philippine drugstore: local brands such as Biogesic, Neozep Forte and RiteMed generics, prices in pesos (₱), and a teal-and-white design. Customers search medicines, see in plain words what each one is for, count any number of **pieces and boxes** with +/- buttons (limited only by the shared shelf stock), fill a basket and leave with a barcoded order slip to pay at the counter. Prescription medicines are gated on the member's purchase history, and an AI stock assistant suggests same-ingredient brands when something is out of stock and answers questions about them, such as "are they the same dosage?".
 
 ## Run it
 

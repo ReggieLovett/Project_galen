@@ -1,18 +1,9 @@
-<x-layouts.kiosk title="Staff" noindex>
-    <header class="flex items-center gap-4 border-b-2 border-line bg-surface px-6 py-4">
-        <x-logo-mark class="size-12 rounded-xl bg-brand text-white" />
-        <div class="min-w-0 flex-1">
-            <p class="font-display text-xl font-bold">{{ config('kiosk.name') }} · Staff</p>
-            <p class="text-ink-muted">Signed in as {{ auth('admin')->user()->name }} · {{ $kioskOrdersToday }} kiosk {{ Str::plural('order', $kioskOrdersToday) }} today</p>
-        </div>
-        <form method="POST" action="{{ route('admin.logout') }}">
-            @csrf
-            <button type="submit" class="btn btn-quiet">
-                <x-icon name="log-out" />Log out
-            </button>
-        </form>
-    </header>
+<x-layouts.staff title="Staff" :subtitle="$kioskOrdersToday.' kiosk '.Str::plural('order', $kioskOrdersToday).' today'">
+    <x-slot:actions>
+        <a href="{{ route('admin.medicines.index') }}" class="btn btn-quiet"><x-icon name="pill" />Inventory</a>
+    </x-slot:actions>
 
+    {{-- Orders waiting at the till come first: they are what staff act on most. --}}
     <main class="mx-auto max-w-6xl space-y-8 px-6 py-8">
         @session('success')
             <x-alert>{{ $value }}</x-alert>
@@ -20,16 +11,6 @@
         @session('error')
             <x-alert type="error">{{ $value }}</x-alert>
         @endsession
-
-        <section class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border-2 border-brand/20 bg-brand-soft px-5 py-4">
-            <div>
-                <h2 class="text-xl font-bold">Medicine inventory</h2>
-                <p class="mt-1 text-ink-muted">Update shelf stock and manage the medicines shown on the kiosk.</p>
-            </div>
-            <a href="{{ route('admin.medicines.index') }}" class="btn btn-primary">
-                <x-icon name="pill" />Manage inventory
-            </a>
-        </section>
 
         <section class="rounded-2xl border-2 border-line bg-surface">
             <h2 class="flex items-center gap-3 border-b-2 border-line px-5 py-4 text-xl font-bold">
@@ -90,18 +71,24 @@
                 <span class="badge bg-danger-soft text-base text-danger tabular-nums">{{ $outOfStock->count() }} out of stock</span>
                 <span class="badge bg-rx-soft text-base text-rx tabular-nums">{{ $lowStock->count() }} running low</span>
             </h2>
+            {{-- Each alert opens that medicine's form, where its stock is updated. --}}
             <ul class="divide-y-2 divide-line">
                 @forelse ($outOfStock->concat($lowStock) as $medicine)
-                    <li class="flex items-center justify-between gap-4 px-5 py-3">
-                        <span>
-                            <span class="font-semibold">{{ $medicine->name }}</span>
-                            <span class="text-ink-muted">· {{ $medicine->drugLabel() }}</span>
-                        </span>
-                        @if ($medicine->isInStock())
-                            <span class="badge bg-rx-soft text-rx">{{ $medicine->countOf(\App\Enums\Packaging::Piece, $medicine->stock) }} left</span>
-                        @else
-                            <span class="badge bg-danger-soft text-danger">Out of stock</span>
-                        @endif
+                    <li>
+                        <a href="{{ route('admin.medicines.edit', $medicine) }}#stock" class="focus-ring flex min-h-14 items-center justify-between gap-4 px-5 py-3 transition-colors duration-150 hover:bg-sunken">
+                            <span class="min-w-0">
+                                <span class="font-semibold">{{ $medicine->name }}</span>
+                                <span class="text-ink-muted">· {{ $medicine->drugLabel() }}</span>
+                            </span>
+                            <span class="flex shrink-0 items-center gap-3">
+                                @if ($medicine->isInStock())
+                                    <span class="badge bg-rx-soft text-rx">{{ $medicine->countOf(\App\Enums\Packaging::Piece, $medicine->stock) }} left</span>
+                                @else
+                                    <span class="badge bg-danger-soft text-danger">Out of stock</span>
+                                @endif
+                                <span class="flex items-center gap-1 font-semibold text-brand">Restock<x-icon name="arrow-right" :size="18" /></span>
+                            </span>
+                        </a>
                     </li>
                 @empty
                     <li class="px-5 py-8 text-center text-ink-muted">Everything is well stocked.</li>
@@ -109,9 +96,4 @@
             </ul>
         </section>
     </main>
-
-    {{-- Staff who walk away are signed out, so customers can't use the dashboard --}}
-    <x-idle-timer leave="Log out now">
-        For security, you'll be logged out and the kiosk will go back to the start screen in <strong class="text-ink tabular-nums" x-text="`${remaining} seconds`"></strong>.
-    </x-idle-timer>
-</x-layouts.kiosk>
+</x-layouts.staff>

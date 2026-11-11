@@ -28,10 +28,11 @@ test('staff can list medicines and edit stock', function () {
     $staff = inventoryStaff();
 
     $this->actingAs($staff, 'admin')
-        ->get(route('admin.medicines.index'))
+        ->get(route('admin.medicines.index', ['search' => 'Advil']))
         ->assertOk()
         ->assertSee($medicine->fullName())
-        ->assertSee('Unavailable');
+        ->assertSee('Out of stock')
+        ->assertSee('Restock needed');
 
     $this->actingAs($staff, 'admin')
         ->put(route('admin.medicines.update', $medicine), [
@@ -54,9 +55,10 @@ test('staff can list medicines and edit stock', function () {
 
     expect($medicine->fresh()->stock)->toBe(80);
 
-    $this->get(route('admin.medicines.index'))
+    $this->get(route('admin.medicines.index', ['search' => 'Advil']))
         ->assertOk()
-        ->assertSee('Available');
+        ->assertSee('In stock')
+        ->assertDontSee('Restock needed');
 
     Auth::shouldUse('web');
 
@@ -121,4 +123,28 @@ test('staff can add and delete an unreferenced medicine', function () {
         ->assertRedirect(route('admin.medicines.index'));
 
     expect(Medicine::find($medicine->id))->toBeNull();
+});
+
+test('every inventory page logs idle staff out and has the staff header', function () {
+    $medicine = Medicine::where('name', 'Advil')->firstOrFail();
+
+    $this->actingAs(inventoryStaff(), 'admin');
+
+    foreach ([route('admin.medicines.index'), route('admin.medicines.create'), route('admin.medicines.edit', $medicine)] as $page) {
+        $this->get($page)
+            ->assertOk()
+            ->assertSeeText('Are you still there?')
+            ->assertSeeText('Log out')
+            ->assertSee(route('admin.dashboard'), false);
+    }
+});
+
+test('dashboard stock alerts open the medicine at its stock field', function () {
+    $outOfStock = Medicine::where('name', 'Advil')->firstOrFail();
+
+    $this->actingAs(inventoryStaff(), 'admin')
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee(route('admin.medicines.edit', $outOfStock).'#stock', false)
+        ->assertSee(route('admin.medicines.index'), false);
 });
